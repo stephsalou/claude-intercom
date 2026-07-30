@@ -4,7 +4,7 @@ import { onNewMessage } from "../valkey/subscribe.js";
 import { resolveWorkspace, extractBearerToken } from "./auth.js";
 import { history } from "../pg/historyRepo.js";
 import { isRateLimited } from "./rateLimit.js";
-import { registerWebhook, listWebhooks } from "../valkey/webhookStore.js";
+import { registerWebhook, listWebhooks, deleteWebhook } from "../valkey/webhookStore.js";
 
 const PORT = Number(process.env.PORT ?? 8787);
 
@@ -193,6 +193,12 @@ Bun.serve({
       if (url.pathname === "/webhooks" && req.method === "GET") {
         const hooks = await listWebhooks(workspace);
         return json({ webhooks: hooks });
+      }
+
+      if (url.pathname.startsWith("/webhooks/") && req.method === "DELETE") {
+        const id = url.pathname.slice("/webhooks/".length);
+        const ok = await deleteWebhook(workspace, id);
+        return json({ ok }, ok ? 200 : 404);
       }
 
       return json({ error: "not found" }, 404);

@@ -30,16 +30,21 @@ services:
       - postgres
 
   web:
-    build: ./web
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_INTERCOM_API_URL: ${PUBLIC_INTERCOM_API_URL:-http://localhost:8787}
     image: claude-intercom-web:latest
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://intercom:${POSTGRES_PASSWORD:-intercom}@postgres:5432/intercom
       SESSION_SECRET: ${SESSION_SECRET:-dev-only-insecure-secret-change-me}
       INTERCOM_API_URL: http://api:8787
+      VALKEY_URL: redis://valkey:6379
     depends_on:
       - postgres
       - api
+      - valkey
 
 volumes:
   valkey-data:

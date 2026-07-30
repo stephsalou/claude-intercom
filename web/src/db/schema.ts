@@ -18,6 +18,7 @@ export const workspaceAccess = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     workspace: text("workspace").notNull(),
     token: text("token").notNull(),
+    role: text("role").notNull().default("membre"), // 'admin' | 'membre' | 'lecture'
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
   },
   (table) => [unique().on(table.userId, table.workspace)],

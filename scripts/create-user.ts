@@ -30,8 +30,8 @@ const [user] = await sql`
 `;
 
 await sql`
-  INSERT INTO workspace_access (user_id, workspace, token)
-  VALUES (${user.id}, ${workspace}, ${token})
+  INSERT INTO workspace_access (user_id, workspace, token, role)
+  VALUES (${user.id}, ${workspace}, ${token}, 'admin')
   ON CONFLICT (user_id, workspace) DO UPDATE SET token = excluded.token
 `;
 

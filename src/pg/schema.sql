@@ -26,6 +26,9 @@ CREATE TABLE IF NOT EXISTS workspace_access (
   user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   workspace text NOT NULL,
   token text NOT NULL,
+  role text NOT NULL DEFAULT 'membre', -- 'admin' | 'membre' | 'lecture'
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (user_id, workspace)
 );
+
+ALTER TABLE workspace_access ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'membre';

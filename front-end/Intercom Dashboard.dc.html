@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/organic-e8940a45-4e5d-440a-a93c-5782b618cee0/styles.css">
+  <script src="_ds/organic-e8940a45-4e5d-440a-a93c-5782b618cee0/_ds_bundle.js"></script>
+  <style>
+    body{margin:0}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    @keyframes rowIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    a{color:var(--color-accent-700)}
+    a:hover{color:var(--color-accent)}
+  </style>
+</helmet>
+
+<div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+
+  <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
+      <div class="card elev-lg" style="width:min(400px,100%);padding:40px 32px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
+          <div style="width:56px;height:56px;border-radius:50%;background:var(--color-accent);display:flex;align-items:center;justify-content:center">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.75" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="8"></circle></svg>
+          </div>
+          <h1 style="font-size:26px;margin:0">Intercom</h1>
+          <p class="text-muted" style="margin:0;font-size:14px">Connecte-toi pour surveiller tes agents</p>
+        </div>
+        <div class="field">
+          <label>Identifiant</label>
+          <input class="input" type="text" placeholder="ex : sofia.k" value="{{ username }}" onChange="{{ onUsernameChange }}"/>
+        </div>
+        <div class="field">
+          <label>Mot de passe</label>
+          <input class="input" type="password" placeholder="••••••••" value="{{ password }}" onChange="{{ onPasswordChange }}"/>
+        </div>
+        <sc-if value="{{ loginError }}">
+          <p role="alert" style="margin:0;font-size:13px;color:var(--color-accent-700)">Renseigne ton identifiant et ton mot de passe pour continuer.</p>
+        </sc-if>
+        <button class="btn btn-primary btn-block" onClick="{{ onSubmitLogin }}">{{ loginLabel }}</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isApp }}">
+    <div style="position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:16px;padding:14px 28px;background:color-mix(in srgb, var(--color-bg) 90%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--color-divider)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--color-accent);display:flex;align-items:center;justify-content:center;flex:none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.75" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="8"></circle></svg>
+        </div>
+        <span style="font-family:var(--font-heading);font-size:18px">Intercom</span>
+      </div>
+
+      <sc-if value="{{ hasWorkspace }}">
+        <select class="input" style="width:auto;min-width:170px;font-family:var(--font-heading);font-size:13px" value="{{ activeWorkspaceId }}" onChange="{{ onWorkspaceChange }}">
+          <sc-for list="{{ workspaces }}" as="ws" hint-placeholder-count="3">
+            <option value="{{ ws.id }}">{{ ws.name }}</option>
+          </sc-for>
+        </select>
+      </sc-if>
+
+      <sc-if value="{{ hasWorkspace }}">
+        <div class="seg" style="font-size:13px">
+          <label class="seg-opt"><input type="radio" name="viewtab" checked="{{ isAgentsTab }}" onChange="{{ onViewAgents }}"/>Agents &amp; flux</label>
+          <label class="seg-opt"><input type="radio" name="viewtab" checked="{{ isUsersTab }}" onChange="{{ onViewUsers }}"/>Utilisateurs</label>
+          <label class="seg-opt"><input type="radio" name="viewtab" checked="{{ isWebhooksTab }}" onChange="{{ onViewWebhooks }}"/>Webhooks</label>
+        </div>
+      </sc-if>
+
+      <div style="flex:1"></div>
+      <span class="text-muted" style="font-size:13px">{{ demoUserLabel }}</span>
+      <button class="btn btn-secondary" onClick="{{ onLogout }}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg>
+        Se déconnecter
+      </button>
+    </div>
+
+    <sc-if value="{{ isNoWorkspace }}">
+      <div style="max-width:520px;margin:100px auto 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;padding:0 24px">
+        <div style="width:56px;height:56px;border-radius:50%;background:var(--color-neutral-200);display:flex;align-items:center;justify-content:center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-text)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V7a4 4 0 018 0v4"></path></svg>
+        </div>
+        <h2 style="margin:0">Aucun accès à un workspace</h2>
+        <p class="text-muted" style="margin:0">Ton compte n'est rattaché à aucun workspace pour l'instant. Demande à un administrateur de t'accorder l'accès à un workspace pour voir les agents et les messages.</p>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hasWorkspace }}">
+      <div style="padding:28px">
+
+        <sc-if value="{{ isAgentsTab }}">
+          <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start">
+            <div style="flex:1 1 280px;max-width:320px;display:flex;flex-direction:column;gap:14px">
+              <h3 style="margin:0">Agents actifs ({{ agentsCount }})</h3>
+              <sc-if value="{{ hasAgents }}">
+                <sc-for list="{{ agents }}" as="agent" hint-placeholder-count="4">
+                  <div class="card elev-sm" style="flex-direction:row;align-items:center;justify-content:space-between;padding:12px 14px;transition:box-shadow .15s ease,transform .15s ease" style-hover="box-shadow:var(--shadow-md);transform:translateY(-1px)">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <span style="width:9px;height:9px;border-radius:50%;background:var(--color-accent-2);animation:pulse 2s ease-in-out infinite;flex:none" aria-hidden="true"></span>
+                      <div>
+                        <div style="font-weight:600;font-size:14px;font-variant-numeric:tabular-nums">{{ agent.code }}</div>
+                        <div class="text-muted" style="font-size:12px">{{ agent.project }}</div>
+                      </div>
+                    </div>
+                    <span class="text-muted" style="font-size:12px;font-variant-numeric:tabular-nums">{{ agent.uptime }}</span>
+                  </div>
+                </sc-for>
+              </sc-if>
+              <sc-if value="{{ isNoAgents }}">
+                <div class="card elev-sm" style="gap:10px;padding:18px">
+                  <p style="margin:0;font-size:13px">Aucun agent connecté sur {{ activeWorkspaceName }} pour l'instant.</p>
+                  <div style="background:var(--color-neutral-100);border-radius:var(--radius-sm);padding:10px 12px;font-family:monospace;font-size:12px;display:flex;flex-direction:column;gap:2px">
+                    <span>INTERCOM_API_URL=https://intercom.utilitaires.ci</span>
+                    <span>INTERCOM_API_TOKEN=&lt;votre_token&gt;</span>
+                  </div>
+                  <button class="btn btn-secondary" style="align-self:flex-start" onClick="{{ onCopySnippet }}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"></rect><rect x="4" y="4" width="11" height="11" rx="2"></rect></svg>
+                    {{ copyLabel }}
+                  </button>
+                </div>
+              </sc-if>
+            </div>
+
+            <div style="flex:2 1 420px;min-width:320px;display:flex;flex-direction:column;gap:14px;position:relative">
+              <h3 style="margin:0">Flux en direct</h3>
+              <div style="display:flex;gap:8px">
+                <select class="input" style="width:auto;min-width:160px" value="{{ composeTarget }}" onChange="{{ onComposeTargetChange }}" aria-label="Destinataire">
+                  <option value="all">Tous les agents</option>
+                  <sc-for list="{{ agents }}" as="agent" hint-placeholder-count="4">
+                    <option value="{{ agent.code }}">{{ agent.code }}</option>
+                  </sc-for>
+                </select>
+                <input class="input" placeholder="{{ composePlaceholder }}" value="{{ broadcastText }}" onChange="{{ onBroadcastChange }}" onKeyDown="{{ onBroadcastKeyDown }}" style="flex:1"/>
+                <button class="btn btn-primary btn-icon" style="min-width:44px;min-height:44px" onClick="{{ onSendBroadcast }}" aria-label="{{ composeSendLabel }}">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+                </button>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px;max-height:520px;overflow:auto;padding-right:4px">
+                <sc-if value="{{ hasMessages }}">
+                  <sc-for list="{{ messages }}" as="msg" hint-placeholder-count="4">
+                    <div class="card elev-sm" style="animation:rowIn .25s ease-out;gap:8px;transition:box-shadow .15s ease" style-hover="box-shadow:var(--shadow-md)">
+                      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+                        <span style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums">{{ msg.from }} → {{ msg.to }}</span>
+                        <span class="text-muted" style="font-size:11px;font-variant-numeric:tabular-nums">{{ msg.timeLabel }}</span>
+                      </div>
+                      <p style="margin:0;font-size:14px">{{ msg.message }}</p>
+                      <div style="display:flex;gap:8px;align-items:center">
+                        <button class="btn btn-ghost" style="font-size:12px;padding:4px 10px" onClick="{{ msg.onReply }}">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"></path><path d="M4 9h11a4 4 0 014 4v2"></path></svg>
+                          Répondre
+                        </button>
+                        <button class="btn {{ msg.ackBtnClass }}" style="font-size:12px;padding:4px 10px" onClick="{{ msg.onAck }}" disabled="{{ msg.acked }}">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg>
+                          {{ msg.ackLabel }}
+                        </button>
+                      </div>
+                      <sc-if value="{{ msg.isReplying }}">
+                        <div style="display:flex;gap:8px;margin-top:4px">
+                          <input class="input" placeholder="Répondre à {{ msg.from }}…" value="{{ replyText }}" onChange="{{ onReplyChange }}" style="flex:1"/>
+                          <button class="btn btn-primary" onClick="{{ msg.onSendReply }}">Envoyer</button>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </sc-if>
+                <sc-if value="{{ noMessages }}">
+                  <p class="text-muted" style="font-size:14px">Les messages entre agents sur {{ activeWorkspaceName }} apparaîtront ici en direct.</p>
+                </sc-if>
+              </div>
+              <div style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;bottom:0" aria-live="polite">{{ lastAnnouncement }}</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isUsersTab }}">
+          <div style="max-width:760px;display:flex;flex-direction:column;gap:20px">
+            <div>
+              <h3 style="margin:0 0 4px">Utilisateurs &amp; rôles</h3>
+              <p class="text-muted" style="margin:0;font-size:14px">Chaque rôle définit ce qu'un membre peut voir et faire sur ce workspace.</p>
+            </div>
+
+            <div class="card elev-sm" style="gap:10px">
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <input class="input" placeholder="email@exemple.com" value="{{ newUserEmail }}" onChange="{{ onNewUserEmailChange }}" style="flex:1;min-width:200px"/>
+                <select class="input" style="width:auto;min-width:150px" value="{{ newUserRole }}" onChange="{{ onNewUserRoleChange }}" aria-label="Rôle du nouvel utilisateur">
+                  <sc-for list="{{ roleOptions }}" as="role" hint-placeholder-count="3">
+                    <option value="{{ role.id }}">{{ role.label }}</option>
+                  </sc-for>
+                </select>
+                <button class="btn btn-primary" onClick="{{ onInviteUser }}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+                  Inviter
+                </button>
+              </div>
+              <sc-if value="{{ inviteError }}">
+                <p role="alert" style="margin:0;font-size:13px;color:var(--color-accent-700)">Saisis une adresse e-mail valide.</p>
+              </sc-if>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ users }}" as="u" hint-placeholder-count="4">
+                <div class="card elev-sm" style="flex-direction:row;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                  <div style="display:flex;align-items:center;gap:12px;min-width:200px">
+                    <div style="width:36px;height:36px;border-radius:50%;background:var(--color-neutral-200);display:flex;align-items:center;justify-content:center;flex:none;font-family:var(--font-heading);font-size:14px">{{ u.initial }}</div>
+                    <div>
+                      <div style="font-weight:600;font-size:14px">{{ u.email }}</div>
+                      <div class="text-muted" style="font-size:12px">{{ u.roleLabel }} · {{ u.permissionSummary }}</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <select class="input" style="width:auto;min-width:150px" value="{{ u.role }}" onChange="{{ u.onRoleChange }}" disabled="{{ u.isSelf }}" aria-label="Rôle de {{ u.email }}">
+                      <sc-for list="{{ roleOptions }}" as="role" hint-placeholder-count="3">
+                        <option value="{{ role.id }}">{{ role.label }}</option>
+                      </sc-for>
+                    </select>
+                    <button class="btn btn-ghost btn-icon" style="min-width:44px;min-height:44px" onClick="{{ u.onRemove }}" disabled="{{ u.isSelf }}" aria-label="Retirer {{ u.email }}">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5l14 14"></path><path d="M19 5L5 19"></path></svg>
+                    </button>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div class="card elev-sm" style="gap:8px">
+              <span style="font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase" class="text-muted">Permissions par rôle</span>
+              <sc-for list="{{ roleOptions }}" as="role" hint-placeholder-count="3">
+                <div style="display:flex;gap:10px;align-items:baseline">
+                  <span class="tag tag-accent" style="width:fit-content;flex:none">{{ role.label }}</span>
+                  <span style="font-size:13px" class="text-muted">{{ role.description }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isWebhooksTab }}">
+          <div style="max-width:640px;display:flex;flex-direction:column;gap:20px">
+            <h3 style="margin:0">Webhooks</h3>
+            <p class="text-muted" style="margin:0;font-size:14px">Reçois un appel HTTP à chaque broadcast (événement <code>broadcast</code>).</p>
+            <div style="display:flex;gap:8px">
+              <input class="input" placeholder="https://votre-service.com/webhook" value="{{ newWebhookUrl }}" onChange="{{ onNewWebhookChange }}" style="flex:1"/>
+              <button class="btn btn-primary" onClick="{{ onAddWebhook }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+                Ajouter
+              </button>
+            </div>
+            <sc-if value="{{ hasWebhooks }}">
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <sc-for list="{{ webhooks }}" as="wh" hint-placeholder-count="2">
+                  <div class="card elev-sm" style="flex-direction:row;align-items:center;justify-content:space-between">
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                      <span style="font-size:14px;font-family:monospace">{{ wh.url }}</span>
+                      <span class="tag tag-accent" style="width:fit-content">broadcast</span>
+                    </div>
+                    <button class="btn btn-ghost btn-icon" style="min-width:44px;min-height:44px" onClick="{{ wh.onDelete }}" aria-label="Supprimer le webhook {{ wh.url }}">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5l14 14"></path><path d="M19 5L5 19"></path></svg>
+                    </button>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noWebhooks }}">
+              <p class="text-muted">Aucun webhook configuré. Ajoute une URL pour recevoir les broadcasts.</p>
+            </sc-if>
+          </div>
+        </sc-if>
+
+      </div>
+    </sc-if>
+
+    <div style="position:fixed;bottom:16px;left:16px;z-index:30;display:flex;flex-direction:column;gap:6px;background:var(--color-surface);padding:10px 14px;border-radius:var(--radius-lg);box-shadow:var(--shadow-md)">
+      <span class="text-muted" style="font-size:10px;letter-spacing:.08em;text-transform:uppercase">Aperçu démo</span>
+      <div class="seg" style="font-size:11px">
+        <label class="seg-opt"><input type="radio" name="scn" checked="{{ isPopulated }}" onChange="{{ onScenarioPopulated }}"/>Peuplé</label>
+        <label class="seg-opt"><input type="radio" name="scn" checked="{{ isNoAgents }}" onChange="{{ onScenarioNoAgents }}"/>0 agent</label>
+        <label class="seg-opt"><input type="radio" name="scn" checked="{{ isNoWorkspace }}" onChange="{{ onScenarioNoWorkspace }}"/>0 workspace</label>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;skipLogin&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Démo&quot;}, &quot;initialView&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;agents&quot;, &quot;options&quot;: [&quot;agents&quot;, &quot;webhooks&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Démo&quot;}, &quot;simulationSpeed&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;normal&quot;, &quot;options&quot;: [&quot;normal&quot;, &quot;fast&quot;, &quot;off&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Démo&quot;}}">
+class Component extends DCLogic {
+  state = {
+    isLogin: true,
+    username: '',
+    password: '',
+    loginError: false,
+    scenario: 'populated',
+    workspaces: [
+      { id: 'w1', name: 'Équipe Nova' },
+      { id: 'w2', name: 'Projet Atlas' },
+      { id: 'w3', name: 'R&D Sandbox' },
+    ],
+    activeWorkspaceId: 'w1',
+    viewTab: 'agents',
+    agents: [],
+    messages: [],
+    webhooks: [{ id: 'wh1', url: 'https://ops.example.com/hooks/intercom' }],
+    replyingId: null,
+    replyText: '',
+    newWebhookUrl: '',
+    broadcastText: '',
+    composeTarget: 'all',
+    lastAnnouncement: '',
+    copied: false,
+    users: [
+      { id: 'u1', email: 'sofia.k@equipe.dev', role: 'admin' },
+      { id: 'u2', email: 'marc.b@equipe.dev', role: 'membre' },
+      { id: 'u3', email: 'lea.t@equipe.dev', role: 'lecture' },
+    ],
+    newUserEmail: '',
+    newUserRole: 'membre',
+    inviteError: false,
+  };
+
+  roleDefs = {
+    admin: { label: 'Administrateur', description: 'Gère les workspaces, les webhooks et les rôles des autres utilisateurs.' },
+    membre: { label: 'Membre', description: 'Voit le flux, diffuse et répond aux agents. Ne peut pas gérer les utilisateurs.' },
+    lecture: { label: 'Lecture seule', description: 'Consulte les agents et les messages, sans pouvoir en envoyer.' },
+  };
+
+  componentDidMount() {
+    this.setState({
+      agents: this.seedAgents(),
+      messages: this.seedMessages(),
+      viewTab: this.props.initialView === 'webhooks' ? 'webhooks' : 'agents',
+      isLogin: this.props.skipLogin ? false : true,
+    });
+
+    const speed = this.props.simulationSpeed || 'normal';
+    if (speed !== 'off') {
+      const mult = speed === 'fast' ? 0.35 : 1;
+      this.agentTimer = setInterval(() => this.tickAgents(), 9000 * mult);
+      this.messageTimer = setInterval(() => this.tickMessages(), 6000 * mult);
+    }
+    this.uptimeTimer = setInterval(() => this.forceUpdate(), 30000);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.agentTimer);
+    clearInterval(this.messageTimer);
+    clearInterval(this.uptimeTimer);
+  }
+
+  seedAgents() {
+    const projects = ['payments-api', 'growth-web', 'infra-tools'];
+    const now = Date.now();
+    return [
+      { code: 'x7k2', project: projects[0], started: now - 1000 * 60 * 47 },
+      { code: 'm3q9', project: projects[1], started: now - 1000 * 60 * 60 * 3 },
+      { code: 'r5t1', project: projects[0], started: now - 1000 * 60 * 12 },
+      { code: 'p8w4', project: projects[2], started: now - 1000 * 60 * 60 * 24 * 2 },
+    ];
+  }
+
+  seedMessages() {
+    const now = Date.now();
+    return [
+      { id: 'msg-1', from: 'x7k2', to: 'm3q9', message: 'Migration terminée sur staging, tu peux relancer les tests.', timestamp: now - 1000 * 60 * 6, reply_to: null, acked: true },
+      { id: 'msg-2', from: 'r5t1', to: 'all', message: 'Déploiement de payments-api dans 10 minutes.', timestamp: now - 1000 * 60 * 3, reply_to: null, acked: false },
+      { id: 'msg-3', from: 'p8w4', to: 'x7k2', message: 'Le job nightly a échoué, logs envoyés par mail.', timestamp: now - 1000 * 60 * 1, reply_to: null, acked: false },
+    ];
+  }
+
+  randomCode() {
+    return Math.random().toString(36).slice(2, 6);
+  }
+
+  tickAgents() {
+    if (this.state.isLogin || this.state.scenario !== 'populated') return;
+    const agents = this.state.agents.slice();
+    if (agents.length > 1 && Math.random() < 0.4) {
+      agents.splice(Math.floor(Math.random() * agents.length), 1);
+    } else if (agents.length < 8) {
+      const projects = ['payments-api', 'growth-web', 'infra-tools', 'search-svc'];
+      agents.push({ code: this.randomCode(), project: projects[Math.floor(Math.random() * projects.length)], started: Date.now() });
+    }
+    this.setState({ agents });
+  }
+
+  tickMessages() {
+    if (this.state.isLogin || this.state.scenario !== 'populated' || this.state.agents.length < 1) return;
+    const agents = this.state.agents;
+    const from = agents[Math.floor(Math.random() * agents.length)];
+    const toBroadcast = Math.random() < 0.3;
+    const other = agents.filter(a => a.code !== from.code);
+    const to = toBroadcast || other.length === 0 ? 'all' : other[Math.floor(Math.random() * other.length)].code;
+    const texts = [
+      'Tests passés, prêt pour le déploiement.',
+      'Quelqu\'un a vu l\'erreur 502 sur /checkout ?',
+      'Rebase effectué, je pousse la branche.',
+      'Pause de 15 min, je reprends après.',
+      'Peux-tu relire ma PR quand tu as un moment ?',
+    ];
+    const msg = { id: 'msg-' + Date.now(), from: from.code, to, message: texts[Math.floor(Math.random() * texts.length)], timestamp: Date.now(), reply_to: null, acked: false };
+    const messages = [msg, ...this.state.messages].slice(0, 200);
+    this.setState({ messages, lastAnnouncement: `Nouveau message de ${from.code}` });
+  }
+
+  formatUptime(started) {
+    const diffMin = Math.max(1, Math.round((Date.now() - started) / 60000));
+    if (diffMin < 60) return `${diffMin}m`;
+    const diffH = Math.round(diffMin / 60);
+    if (diffH < 24) return `${diffH}h`;
+    return `${Math.round(diffH / 24)}j`;
+  }
+
+  formatTime(ts) {
+    return new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  handleLogin = () => {
+    if (!this.state.username.trim() || !this.state.password.trim()) {
+      this.setState({ loginError: true });
+      return;
+    }
+    this.setState({ isLogin: false, loginError: false });
+  };
+
+  handleLogout = () => this.setState({ isLogin: true, replyingId: null, replyText: '' });
+
+  handleSendBroadcast = () => {
+    const text = this.state.broadcastText.trim();
+    if (!text) return;
+    const target = this.state.composeTarget;
+    const msg = { id: 'msg-' + Date.now(), from: this.state.username || 'dashboard', to: target, message: text, timestamp: Date.now(), reply_to: null, acked: false };
+    const announcement = target === 'all' ? 'Message diffusé à tous les agents' : `Message envoyé à ${target}`;
+    this.setState({ messages: [msg, ...this.state.messages].slice(0, 200), broadcastText: '', lastAnnouncement: announcement });
+  };
+
+  handleBroadcastKeyDown = (e) => { if (e.key === 'Enter') this.handleSendBroadcast(); };
+
+  handleReplyClick = (id) => this.setState({ replyingId: this.state.replyingId === id ? null : id, replyText: '' });
+
+  handleSendReply = (msg) => {
+    const text = this.state.replyText.trim();
+    if (!text) return;
+    const reply = { id: 'msg-' + Date.now(), from: this.state.username || 'vous', to: msg.from, message: text, timestamp: Date.now(), reply_to: msg.id, acked: false };
+    const messages = this.state.messages.map(m => m.id === msg.id ? { ...m, acked: true } : m);
+    this.setState({ messages: [reply, ...messages].slice(0, 200), replyingId: null, replyText: '', lastAnnouncement: `Réponse envoyée à ${msg.from}` });
+  };
+
+  handleAck = (id) => this.setState({ messages: this.state.messages.map(m => m.id === id ? { ...m, acked: true } : m) });
+
+  handleAddWebhook = () => {
+    const url = this.state.newWebhookUrl.trim();
+    if (!url) return;
+    this.setState({ webhooks: [...this.state.webhooks, { id: 'wh-' + Date.now(), url }], newWebhookUrl: '' });
+  };
+
+  handleDeleteWebhook = (id) => this.setState({ webhooks: this.state.webhooks.filter(w => w.id !== id) });
+
+  isValidEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+  handleInviteUser = () => {
+    const email = this.state.newUserEmail.trim();
+    if (!this.isValidEmail(email)) { this.setState({ inviteError: true }); return; }
+    const user = { id: 'u-' + Date.now(), email, role: this.state.newUserRole };
+    this.setState({ users: [...this.state.users, user], newUserEmail: '', inviteError: false });
+  };
+
+  handleChangeUserRole = (id, role) => this.setState({ users: this.state.users.map(u => u.id === id ? { ...u, role } : u) });
+
+  handleRemoveUser = (id) => this.setState({ users: this.state.users.filter(u => u.id !== id) });
+
+  handleCopySnippet = () => {
+    const snippet = 'INTERCOM_API_URL=https://intercom.utilitaires.ci\nINTERCOM_API_TOKEN=<votre_token>';
+    if (navigator.clipboard) navigator.clipboard.writeText(snippet).catch(() => {});
+    this.setState({ copied: true });
+    setTimeout(() => this.setState({ copied: false }), 1500);
+  };
+
+  setScenario(name) { this.setState({ scenario: name }); }
+
+  renderVals() {
+    const s = this.state;
+    const activeWorkspace = s.workspaces.find(w => w.id === s.activeWorkspaceId) || s.workspaces[0];
+    const hasWorkspace = s.scenario !== 'noWorkspace';
+    const agentsRaw = s.scenario === 'noAgents' ? [] : s.agents;
+    const messagesSorted = [...s.messages].sort((a, b) => b.timestamp - a.timestamp).slice(0, 200);
+
+    return {
+      isLogin: s.isLogin,
+      isApp: !s.isLogin,
+      username: s.username,
+      password: s.password,
+      loginError: s.loginError,
+      loginLabel: 'Se connecter',
+      onUsernameChange: (e) => this.setState({ username: e.target.value }),
+      onPasswordChange: (e) => this.setState({ password: e.target.value }),
+      onSubmitLogin: this.handleLogin,
+
+      workspaces: s.workspaces,
+      activeWorkspaceId: s.activeWorkspaceId,
+      activeWorkspaceName: activeWorkspace ? activeWorkspace.name : '',
+      onWorkspaceChange: (e) => this.setState({ activeWorkspaceId: e.target.value }),
+      hasWorkspace,
+
+      isAgentsTab: s.viewTab === 'agents',
+      isUsersTab: s.viewTab === 'users',
+      isWebhooksTab: s.viewTab === 'webhooks',
+      onViewAgents: () => this.setState({ viewTab: 'agents' }),
+      onViewUsers: () => this.setState({ viewTab: 'users' }),
+      onViewWebhooks: () => this.setState({ viewTab: 'webhooks' }),
+
+      isPopulated: s.scenario === 'populated',
+      isNoAgents: s.scenario === 'noAgents',
+      isNoWorkspace: s.scenario === 'noWorkspace',
+      onScenarioPopulated: () => this.setScenario('populated'),
+      onScenarioNoAgents: () => this.setScenario('noAgents'),
+      onScenarioNoWorkspace: () => this.setScenario('noWorkspace'),
+
+      agentsCount: agentsRaw.length,
+      hasAgents: agentsRaw.length > 0,
+      agents: agentsRaw.map(a => ({ ...a, uptime: this.formatUptime(a.started) })),
+
+      broadcastText: s.broadcastText,
+      onBroadcastChange: (e) => this.setState({ broadcastText: e.target.value }),
+      onBroadcastKeyDown: this.handleBroadcastKeyDown,
+      onSendBroadcast: this.handleSendBroadcast,
+      composeTarget: s.composeTarget,
+      onComposeTargetChange: (e) => this.setState({ composeTarget: e.target.value }),
+      composePlaceholder: s.composeTarget === 'all' ? 'Diffuser un message à tous les agents…' : `Écrire à ${s.composeTarget}…`,
+      composeSendLabel: s.composeTarget === 'all' ? 'Diffuser le message' : `Envoyer à ${s.composeTarget}`,
+
+      hasMessages: messagesSorted.length > 0,
+      noMessages: messagesSorted.length === 0,
+      messages: messagesSorted.map(m => ({
+        ...m,
+        timeLabel: this.formatTime(m.timestamp),
+        isReplying: s.replyingId === m.id,
+        ackLabel: m.acked ? 'Acquitté' : 'Acquitter',
+        ackBtnClass: m.acked ? 'btn-secondary' : 'btn-ghost',
+        onReply: () => this.handleReplyClick(m.id),
+        onAck: () => this.handleAck(m.id),
+        onSendReply: () => this.handleSendReply(m),
+      })),
+      replyText: s.replyText,
+      onReplyChange: (e) => this.setState({ replyText: e.target.value }),
+      lastAnnouncement: s.lastAnnouncement,
+
+      webhooks: s.webhooks.map(w => ({ ...w, onDelete: () => this.handleDeleteWebhook(w.id) })),
+      hasWebhooks: s.webhooks.length > 0,
+      noWebhooks: s.webhooks.length === 0,
+      newWebhookUrl: s.newWebhookUrl,
+      onNewWebhookChange: (e) => this.setState({ newWebhookUrl: e.target.value }),
+      onAddWebhook: this.handleAddWebhook,
+
+      roleOptions: Object.keys(this.roleDefs).map(id => ({ id, label: this.roleDefs[id].label, description: this.roleDefs[id].description })),
+      users: s.users.map(u => ({
+        ...u,
+        initial: u.email[0].toUpperCase(),
+        roleLabel: this.roleDefs[u.role].label,
+        permissionSummary: this.roleDefs[u.role].description,
+        isSelf: s.username && u.email.startsWith(s.username),
+        onRoleChange: (e) => this.handleChangeUserRole(u.id, e.target.value),
+        onRemove: () => this.handleRemoveUser(u.id),
+      })),
+      newUserEmail: s.newUserEmail,
+      newUserRole: s.newUserRole,
+      onNewUserEmailChange: (e) => this.setState({ newUserEmail: e.target.value, inviteError: false }),
+      onNewUserRoleChange: (e) => this.setState({ newUserRole: e.target.value }),
+      onInviteUser: this.handleInviteUser,
+      inviteError: s.inviteError,
+
+      onLogout: this.handleLogout,
+      onCopySnippet: this.handleCopySnippet,
+      copyLabel: s.copied ? 'Copié !' : 'Copier',
+      demoUserLabel: s.username || 'vous',
+    };
+  }
+}
+
+</script>
+</body>
+</html>

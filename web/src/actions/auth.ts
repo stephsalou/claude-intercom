@@ -14,12 +14,12 @@ export async function login(_prevState: LoginState | undefined, formData: FormDa
   const password = String(formData.get("password") ?? "");
 
   if (!username || !password) {
-    return { error: "Enter both a username and a password." };
+    return { error: "Renseigne ton identifiant et ton mot de passe pour continuer." };
   }
 
   const user = await getUserByUsername(username);
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    return { error: "Incorrect username or password." };
+    return { error: "Identifiant ou mot de passe incorrect." };
   }
 
   await createSession(user.id, user.username);

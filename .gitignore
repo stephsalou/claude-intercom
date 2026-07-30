@@ -4,3 +4,4 @@ store/
 .env
 _bmad*
 .claude
+.DS_Store

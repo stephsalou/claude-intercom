@@ -7,46 +7,33 @@ export function LoginForm() {
   const [state, action, pending] = useActionState(login, undefined);
 
   return (
-    <form action={action} className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-6 shadow-sm">
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="username" className="text-sm font-medium">
-          Username
-        </label>
-        <input
-          id="username"
-          name="username"
-          type="text"
-          autoComplete="username"
-          required
-          autoFocus
-          className="rounded-lg border border-border bg-background px-3 py-2 text-base outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent sm:text-sm"
-        />
+    <form action={action} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <div className="field">
+        <label htmlFor="username">Identifiant</label>
+        <input id="username" className="input" name="username" type="text" placeholder="ex : sofia.k" autoComplete="username" required />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="password" className="text-sm font-medium">
-          Password
-        </label>
+      <div className="field">
+        <label htmlFor="password">Mot de passe</label>
         <input
           id="password"
+          className="input"
           name="password"
           type="password"
+          placeholder="••••••••"
           autoComplete="current-password"
           required
-          className="rounded-lg border border-border bg-background px-3 py-2 text-base outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent sm:text-sm"
         />
       </div>
 
-      <div aria-live="polite">
-        {state?.error && <p className="text-sm text-danger">{state.error}</p>}
-      </div>
+      {state?.error && (
+        <p role="alert" style={{ margin: 0, fontSize: 13, color: "var(--color-accent-700)" }}>
+          {state.error}
+        </p>
+      )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="mt-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-[transform,opacity] active:scale-[0.96] disabled:opacity-60"
-      >
-        {pending ? "Signing in…" : "Sign in"}
+      <button type="submit" disabled={pending} className="btn btn-primary btn-block">
+        {pending ? "Connexion…" : "Se connecter"}
       </button>
     </form>
   );

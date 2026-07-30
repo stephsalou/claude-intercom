@@ -21,3 +21,10 @@ export async function listWebhooks(workspace: string, event?: string): Promise<W
   const hooks: Webhook[] = raw.map((v) => JSON.parse(v)).filter(Boolean);
   return event ? hooks.filter((h) => h.events.includes(event)) : hooks;
 }
+
+export async function deleteWebhook(workspace: string, id: string): Promise<boolean> {
+  assertSafeId(workspace, "workspace");
+  assertSafeId(id, "webhook id");
+  const deleted = await valkey.hdel(`webhooks:${workspace}`, id);
+  return deleted === 1;
+}

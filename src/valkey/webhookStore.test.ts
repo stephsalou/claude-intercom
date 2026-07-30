@@ -29,4 +29,15 @@ test.skipIf(!reachable)("webhooks are scoped by workspace", async () => {
   expect(hooksB.some((h) => h.url === "https://example.com/a")).toBe(false);
 });
 
+test.skipIf(!reachable)("deleted webhook no longer shows up in listWebhooks", async () => {
+  const hook = await webhookStore!.registerWebhook("ws-delete", "https://example.com/to-delete", ["broadcast"]);
+  expect(await webhookStore!.deleteWebhook("ws-delete", hook.id)).toBe(true);
+  const hooks = await webhookStore!.listWebhooks("ws-delete");
+  expect(hooks.some((h) => h.id === hook.id)).toBe(false);
+});
+
+test.skipIf(!reachable)("deleting an unknown webhook id returns false", async () => {
+  expect(await webhookStore!.deleteWebhook("ws-delete", "not-a-real-id")).toBe(false);
+});
+
 test.skipIf(reachable)("skipped: no reachable Valkey at " + url, () => {});
