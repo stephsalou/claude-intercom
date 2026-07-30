@@ -234,7 +234,7 @@ heartbeats — no manual cleanup needed.
 | `/register` | POST | `{code, project}` | |
 | `/heartbeat` | POST | `{code}` | Renews the 30s presence TTL |
 | `/who` | GET | `?scope=project\|all&project=X` | |
-| `/send` | POST | `{from, to, message}` | `to="all"` broadcasts |
+| `/send` | POST | `{from, to, message}` | `to="all"` broadcasts; `429` past `RATE_LIMIT_PER_MIN` per workspace |
 | `/reply` | POST | `{from, message_id, message}` | |
 | `/peek` | GET | `?code=X` | |
 | `/ack` | POST | `{code, message_id}` | |

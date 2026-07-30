@@ -3,6 +3,7 @@ import * as messages from "../valkey/messageStore.js";
 import { onNewMessage } from "../valkey/subscribe.js";
 import { resolveWorkspace, extractBearerToken } from "./auth.js";
 import { history } from "../pg/historyRepo.js";
+import { isRateLimited } from "./rateLimit.js";
 
 const PORT = Number(process.env.PORT ?? 8787);
 
@@ -100,6 +101,12 @@ Bun.serve({
         const body = await readJson(req);
         if (!body?.from || !body?.to || !body?.message) {
           return json({ error: "from, to and message required" }, 400);
+        }
+        if (await isRateLimited(workspace)) {
+          return new Response(JSON.stringify({ error: "rate limit exceeded" }), {
+            status: 429,
+            headers: { "content-type": "application/json", "retry-after": "60" },
+          });
         }
         const projectOnly = body.to === "all" ? body.project : undefined;
         const msg = await messages.sendMessage(
