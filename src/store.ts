@@ -10,6 +10,7 @@ import {
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";
+import { assertSafeId } from "./safeId.js";
 
 const HOME = process.env.HOME ?? "~";
 const STORE_DIR = join(HOME, ".claude", "mcp-intercom", "store");
@@ -130,6 +131,7 @@ export function findMyCodeSync(): string | null {
 // --- Sync peek for hook ---
 
 export function peekMessagesSync(code: string): Message[] {
+  assertSafeId(code, "agent code");
   const inbox = join(MESSAGES_DIR, code);
   try {
     const files = readdirSync(inbox);
@@ -153,6 +155,7 @@ export async function register(
   pid: number,
   project: string,
 ): Promise<void> {
+  assertSafeId(code, "agent code");
   await ensureDirs();
   await writeFile(
     join(PRESENCE_DIR, `${code}.json`),
@@ -200,6 +203,8 @@ export async function sendMessage(
   replyTo?: string,
   projectOnly?: string,
 ): Promise<Message> {
+  assertSafeId(from, "agent code");
+  if (to !== "all") assertSafeId(to, "agent code");
   const id = `msg-${Date.now()}-${randomBytes(3).toString("hex")}`;
   const msg: Message = {
     id,
@@ -231,6 +236,7 @@ export async function sendMessage(
 }
 
 export async function peekMessages(code: string): Promise<Message[]> {
+  assertSafeId(code, "agent code");
   const inbox = join(MESSAGES_DIR, code);
   try {
     const files = await readdir(inbox);
@@ -251,6 +257,8 @@ export async function ackMessage(
   code: string,
   messageId: string,
 ): Promise<boolean> {
+  assertSafeId(code, "agent code");
+  assertSafeId(messageId, "message id");
   try {
     await unlink(join(MESSAGES_DIR, code, `${messageId}.json`));
     return true;

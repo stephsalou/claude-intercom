@@ -1,0 +1,23 @@
+services:
+  valkey:
+    image: valkey/valkey:8
+    restart: unless-stopped
+    volumes:
+      - valkey-data:/data
+    command: ["valkey-server", "--save", "60", "1"]
+    ports:
+      - "127.0.0.1:6379:6379" # localhost-only, for local dev/tests — not exposed on the VPS's public interface
+
+  api:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      VALKEY_URL: redis://valkey:6379
+    ports:
+      - "8787:8787"
+    depends_on:
+      - valkey
+
+volumes:
+  valkey-data:

@@ -96,14 +96,15 @@ Proactively send messages when:
     message: z.string().describe("Free-form message content"),
   },
   async ({ to, message }) => {
-    const projectFilter = to === "all" ? project : undefined;
-    const msg = await sendMessage(
-      agentCode,
-      to,
-      message,
-      undefined,
-      projectFilter,
-    );
+    let msg;
+    try {
+      const projectFilter = to === "all" ? project : undefined;
+      msg = await sendMessage(agentCode, to, message, undefined, projectFilter);
+    } catch {
+      return {
+        content: [{ type: "text", text: `Invalid recipient code: "${to}"` }],
+      };
+    }
     const target = to === "all" ? `all agents on "${project}"` : to;
     return {
       content: [
@@ -192,7 +193,14 @@ server.tool(
     message_id: z.string().describe("Message ID to acknowledge"),
   },
   async ({ message_id }) => {
-    const ok = await ackMessage(agentCode, message_id);
+    let ok = false;
+    try {
+      ok = await ackMessage(agentCode, message_id);
+    } catch {
+      return {
+        content: [{ type: "text", text: `Invalid message id: "${message_id}"` }],
+      };
+    }
     return {
       content: [
         {

@@ -143,6 +143,76 @@ Three layers ensure agents never miss a message:
 
 The MCP server and hooks both run as children of the same Claude Code process. On startup, the server writes its agent code to `sessions/{pid}.code` for each PID in its ancestor chain. The hook walks up its own ancestor chain and matches against these files — the common ancestor (Claude Code) is the link.
 
+## Deployment V1 (VPS, Docker Compose)
+
+A hosted backend (Valkey + HTTP/SSE API) lets agents on different machines talk to each
+other, instead of only agents sharing the same local filesystem.
+
+```bash
+cp .env.example .env
+# edit .env: set API_TOKENS to a long random value
+docker compose up -d --build
+```
+
+This starts two services: `valkey` (data store, not exposed publicly) and `api` (HTTP +
+SSE, port `8787`).
+
+### Verify the deployment
+
+```bash
+TOKEN="<value from .env API_TOKENS>"
+HOST="http://<vps-ip-or-domain>:8787"
+
+# 1. Health check (no auth required)
+curl -s "$HOST/health"
+
+# 2. Register two agents
+curl -s -X POST "$HOST/register" -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"code":"aaaa","project":"demo"}'
+curl -s -X POST "$HOST/register" -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"code":"bbbb","project":"demo"}'
+
+# 3. Who's online
+curl -s "$HOST/who?scope=project&project=demo" -H "Authorization: Bearer $TOKEN"
+
+# 4. Send a message
+curl -s -X POST "$HOST/send" -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"from":"aaaa","to":"bbbb","message":"hello"}'
+
+# 5a. Read it (pull)
+curl -s "$HOST/peek?code=bbbb" -H "Authorization: Bearer $TOKEN"
+
+# 5b. Or watch it arrive live (push, in a separate terminal, run before step 4)
+curl -N -H "Authorization: Bearer $TOKEN" "$HOST/events?code=bbbb"
+
+# 6. Acknowledge it
+curl -s -X POST "$HOST/ack" -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{"code":"bbbb","message_id":"<id from step 4/5>"}'
+```
+
+A request without a valid `Authorization: Bearer` header on any route except `/health`
+returns `401`. Presence entries expire automatically (30s TTL) if an agent stops sending
+heartbeats — no manual cleanup needed.
+
+### HTTP API reference
+
+| Route | Method | Body / Query | Notes |
+|-------|--------|---------------|-------|
+| `/health` | GET | — | No auth |
+| `/register` | POST | `{code, project}` | |
+| `/heartbeat` | POST | `{code}` | Renews the 30s presence TTL |
+| `/who` | GET | `?scope=project\|all&project=X` | |
+| `/send` | POST | `{from, to, message}` | `to="all"` broadcasts |
+| `/reply` | POST | `{from, message_id, message}` | |
+| `/peek` | GET | `?code=X` | |
+| `/ack` | POST | `{code, message_id}` | |
+| `/ack_all` | POST | `{code}` | |
+| `/events` | GET | `?code=X` | Server-Sent Events stream |
+
+Not yet wired: the local MCP server (`src/server.ts`) still uses the local filesystem
+store. Pointing it at this hosted API is tracked separately (see
+`_bmad-output/implementation-artifacts/epics-intercom-saas-v1.md`, Epic 5).
+
 ## Requirements
 
 - [Bun](https://bun.sh) runtime
