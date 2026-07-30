@@ -2,3 +2,5 @@ node_modules/
 store/
 *.lock
 .env
+_bmad*
+.claude
