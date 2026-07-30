@@ -4,6 +4,7 @@ import { onNewMessage } from "../valkey/subscribe.js";
 import { resolveWorkspace, extractBearerToken } from "./auth.js";
 import { history } from "../pg/historyRepo.js";
 import { isRateLimited } from "./rateLimit.js";
+import { registerWebhook, listWebhooks } from "../valkey/webhookStore.js";
 
 const PORT = Number(process.env.PORT ?? 8787);
 
@@ -178,6 +179,20 @@ Bun.serve({
         const limit = Number(url.searchParams.get("limit") ?? 100);
         const rows = await history(workspace, code, since, limit);
         return json({ messages: rows });
+      }
+
+      if (url.pathname === "/webhooks" && req.method === "POST") {
+        const body = await readJson(req);
+        if (!body?.url || !Array.isArray(body?.events) || body.events.length === 0) {
+          return json({ error: "url and non-empty events array required" }, 400);
+        }
+        const webhook = await registerWebhook(workspace, body.url, body.events);
+        return json({ webhook });
+      }
+
+      if (url.pathname === "/webhooks" && req.method === "GET") {
+        const hooks = await listWebhooks(workspace);
+        return json({ webhooks: hooks });
       }
 
       return json({ error: "not found" }, 404);

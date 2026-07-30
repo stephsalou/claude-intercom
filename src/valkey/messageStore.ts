@@ -3,6 +3,7 @@ import { valkey } from "./client.js";
 import { assertSafeId } from "../safeId.js";
 import { listAgents } from "./presenceStore.js";
 import { recordMessage, markAcked } from "../pg/historyRepo.js";
+import { listWebhooks } from "./webhookStore.js";
 import type { Message } from "../store.js";
 
 const MAX_STREAM_LEN = 1000;
@@ -65,6 +66,20 @@ function streamIdFromMessageId(messageId: string): string {
   return messageId.startsWith("msg-") ? messageId.slice(4) : messageId;
 }
 
+async function notifyWebhooks(workspace: string, event: string, payload: unknown): Promise<void> {
+  const hooks = await listWebhooks(workspace, event);
+  await Promise.all(
+    hooks.map((hook) =>
+      fetch(hook.url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ event, payload }),
+        signal: AbortSignal.timeout(2000),
+      }).catch((err) => console.error(`webhook delivery to ${hook.url} failed:`, err)),
+    ),
+  );
+}
+
 export async function sendMessage(
   workspace: string,
   from: string,
@@ -82,6 +97,7 @@ export async function sendMessage(
     const sent = await Promise.all(
       recipients.map((a) => writeToInbox(workspace, a.code, from, message, replyTo)),
     );
+    await notifyWebhooks(workspace, "broadcast", { from, message, recipients: recipients.map((a) => a.code) });
     return (
       sent[0] ?? {
         id: `msg-${randomBytes(6).toString("hex")}`,

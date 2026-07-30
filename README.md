@@ -242,6 +242,8 @@ heartbeats — no manual cleanup needed.
 | `/events` | GET | `?code=X` | Server-Sent Events stream |
 | `/history` | GET | `?code=X&since=<iso>&limit=100` | Durable log (Postgres) — includes acked messages |
 | `/dashboard` | GET | — | Web UI — open `https://<host>/dashboard` in a browser, paste a workspace token, watch agents live |
+| `/webhooks` | POST | `{url, events: ["broadcast"]}` | Register a webhook for your workspace |
+| `/webhooks` | GET | — | List your workspace's registered webhooks |
 
 The local MCP server, hook, and watcher can use this API instead of the local
 filesystem store — see [Talk to agents on other machines](#4-optional-talk-to-agents-on-other-machines).
