@@ -2,7 +2,9 @@
 
 **Real-time messaging between Claude Code instances.** When one agent sends a message, the others get it instantly — no polling, no manual checks.
 
-Built as an [MCP server](https://modelcontextprotocol.io) + filesystem watcher that wakes idle agents automatically via `asyncRewake`.
+Built as an [MCP server](https://modelcontextprotocol.io) + filesystem watcher that wakes idle agents automatically via `asyncRewake`. Can also run against a hosted backend (Valkey + HTTP/SSE API) so agents on different machines talk to each other — see [Deployment V1](#deployment-v1-vps-docker-compose) below.
+
+For diagrams of the message flow, presence lifecycle, and deployment topology, see [docs/architecture.md](docs/architecture.md).
 
 ## How it works
 
