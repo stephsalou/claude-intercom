@@ -1,0 +1,14 @@
+# VPS overlay — joins the API to BunkerWeb's existing overlay network so it's
+# reachable internally as http://intercom-api:8787, with no port published on the host.
+# Deploy with: docker stack deploy -c docker-compose.yml -c docker-compose.vps.yml claude-intercom
+services:
+  api:
+    networks:
+      default:
+      bunkeraio_default:
+        aliases:
+          - intercom-api
+
+networks:
+  bunkeraio_default:
+    external: true

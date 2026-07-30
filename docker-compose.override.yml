@@ -1,0 +1,10 @@
+# Local dev only — auto-loaded by `docker compose up`, ignored by `docker stack deploy`.
+# Exposes ports directly on the host so you can curl the API without a reverse proxy.
+services:
+  valkey:
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  api:
+    ports:
+      - "8787:8787"
