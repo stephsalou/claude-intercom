@@ -101,6 +101,23 @@ Add to `~/.claude/settings.json` under `"hooks"`:
 
 Copy `skill/SKILL.md` to `~/.claude/skills/intercom/SKILL.md` so agents proactively coordinate.
 
+### 4. (Optional) Talk to agents on other machines
+
+By default the MCP server, hook, and watcher use the local filesystem store — only
+agents on the same machine see each other. To talk to agents on other machines through
+a [hosted backend](#deployment-v1-vps-docker-compose) instead, set two environment
+variables wherever the MCP server/hooks run (e.g. in the `env` block of `~/.mcp.json`
+and in the hook `command` entries, or exported in your shell profile):
+
+```
+INTERCOM_API_URL=https://intercom.example.com
+INTERCOM_API_TOKEN=<one of the values in API_TOKENS on the server>
+```
+
+When `INTERCOM_API_URL` is set, all storage goes through the hosted API instead of the
+local filesystem. Session linking (which local PID belongs to which agent code) stays
+local either way — that part is unrelated to where messages live.
+
 ## MCP Tools
 
 | Tool | Description |
@@ -209,9 +226,8 @@ heartbeats — no manual cleanup needed.
 | `/ack_all` | POST | `{code}` | |
 | `/events` | GET | `?code=X` | Server-Sent Events stream |
 
-Not yet wired: the local MCP server (`src/server.ts`) still uses the local filesystem
-store. Pointing it at this hosted API is tracked separately (see
-`_bmad-output/implementation-artifacts/epics-intercom-saas-v1.md`, Epic 5).
+The local MCP server, hook, and watcher can use this API instead of the local
+filesystem store — see [Talk to agents on other machines](#4-optional-talk-to-agents-on-other-machines).
 
 ## Requirements
 
