@@ -69,6 +69,13 @@ Bun.serve({
       return json({ status: "ok" });
     }
 
+    if (url.pathname === "/dashboard") {
+      // No server-side auth check here — the page itself prompts for a token and
+      // sends it on every API call it makes (query param for SSE, header otherwise).
+      const file = Bun.file(new URL("../../public/dashboard.html", import.meta.url));
+      return new Response(file, { headers: { "content-type": "text/html" } });
+    }
+
     const workspace = await resolveWorkspace(extractBearerToken(req));
     if (!workspace) {
       return json({ error: "unauthorized" }, 401);

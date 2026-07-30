@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>claude-intercom dashboard</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+  #login { display: flex; gap: 0.5rem; }
+  #login input { flex: 1; padding: 0.4rem; }
+  #app { display: none; }
+  #agents { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  #agents button { padding: 0.3rem 0.6rem; }
+  #agents button.active { background: #333; color: #fff; }
+  #log { border: 1px solid #ccc; border-radius: 4px; padding: 0.75rem; height: 320px; overflow-y: auto; }
+  #log p { margin: 0.25rem 0; }
+  .muted { color: #888; font-size: 0.85em; }
+</style>
+</head>
+<body>
+  <h1>📡 intercom dashboard</h1>
+
+  <div id="login">
+    <input id="token-input" type="password" placeholder="API token" />
+    <button id="token-submit">Connect</button>
+  </div>
+
+  <div id="app">
+    <div id="agents"></div>
+    <div id="log"><p class="muted">Select an agent to watch its inbox live.</p></div>
+  </div>
+
+  <script>
+    let token = localStorage.getItem("intercom_token");
+    let watchedCode = null;
+    let source = null;
+
+    const login = document.getElementById("login");
+    const app = document.getElementById("app");
+    const agentsEl = document.getElementById("agents");
+    const logEl = document.getElementById("log");
+
+    function api(path) {
+      return fetch(path, { headers: { authorization: "Bearer " + token } });
+    }
+
+    function log(text) {
+      const p = document.createElement("p");
+      p.textContent = text;
+      logEl.appendChild(p);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    async function refreshAgents() {
+      const res = await api("/who?scope=all");
+      if (res.status === 401) return showLogin();
+      const { agents } = await res.json();
+      agentsEl.innerHTML = "";
+      for (const a of agents) {
+        const btn = document.createElement("button");
+        btn.textContent = a.code;
+        if (a.code === watchedCode) btn.classList.add("active");
+        btn.onclick = () => watch(a.code);
+        agentsEl.appendChild(btn);
+      }
+    }
+
+    function watch(code) {
+      watchedCode = code;
+      logEl.innerHTML = "";
+      log(`watching "${code}"...`);
+      if (source) source.close();
+      source = new EventSource(`/events?code=${encodeURIComponent(code)}&token=${encodeURIComponent(token)}`);
+      source.onmessage = async (e) => {
+        const { messageId } = JSON.parse(e.data);
+        const res = await api(`/peek?code=${encodeURIComponent(code)}`);
+        const { messages } = await res.json();
+        const msg = messages.find((m) => m.id === messageId);
+        if (msg) log(`[${msg.id}] ${msg.from}: ${msg.message}`);
+      };
+      refreshAgents();
+    }
+
+    function showLogin() {
+      localStorage.removeItem("intercom_token");
+      token = null;
+      login.style.display = "flex";
+      app.style.display = "none";
+    }
+
+    function showApp() {
+      login.style.display = "none";
+      app.style.display = "block";
+      refreshAgents();
+      setInterval(refreshAgents, 5000);
+    }
+
+    document.getElementById("token-submit").onclick = () => {
+      const value = document.getElementById("token-input").value.trim();
+      if (!value) return;
+      token = value;
+      localStorage.setItem("intercom_token", token);
+      showApp();
+    };
+
+    if (token) showApp();
+    else showLogin();
+  </script>
+</body>
+</html>
