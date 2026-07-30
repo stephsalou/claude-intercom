@@ -1,11 +1,8 @@
-const tokens = (process.env.API_TOKENS ?? "")
-  .split(",")
-  .map((t) => t.trim())
-  .filter(Boolean);
+import { resolveToken } from "../valkey/tokenStore.js";
 
-export function isValidToken(token: string | null): boolean {
-  if (!token) return false;
-  return tokens.includes(token);
+export async function resolveWorkspace(token: string | null): Promise<string | null> {
+  if (!token) return null;
+  return resolveToken(token);
 }
 
 export function extractBearerToken(req: Request): string | null {

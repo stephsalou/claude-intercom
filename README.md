@@ -113,7 +113,7 @@ and in the hook `command` entries, or exported in your shell profile):
 
 ```
 INTERCOM_API_URL=https://intercom.example.com
-INTERCOM_API_TOKEN=<one of the values in API_TOKENS on the server>
+INTERCOM_API_TOKEN=<a token issued for your workspace on the server, see below>
 ```
 
 When `INTERCOM_API_URL` is set, all storage goes through the hosted API instead of the
@@ -169,17 +169,30 @@ other, instead of only agents sharing the same local filesystem.
 
 ```bash
 cp .env.example .env
-# edit .env: set API_TOKENS to a long random value
 docker compose up -d --build
 ```
 
 This starts two services: `valkey` (data store, not exposed publicly) and `api` (HTTP +
 SSE, port `8787`).
 
+Each team/workspace gets its own token — nothing to set in `.env`. Issue one per
+workspace:
+
+```bash
+docker compose exec api bun scripts/issue-token.ts acme
+# prints a token — give it to that workspace's agents as INTERCOM_API_TOKEN
+```
+
+Tokens are stored in Valkey (`token:<token> -> workspace`), not in a config file.
+Revoking one is a matter of deleting that key (a `revokeToken` helper is exported from
+`src/valkey/tokenStore.ts` for scripting this). All data — presence, inboxes,
+notifications — is scoped by workspace, so one workspace's agents never see or message
+another's, even if they happen to pick the same agent code.
+
 ### Verify the deployment
 
 ```bash
-TOKEN="<value from .env API_TOKENS>"
+TOKEN="<token from issue-token.ts above>"
 HOST="http://<vps-ip-or-domain>:8787"
 
 # 1. Health check (no auth required)

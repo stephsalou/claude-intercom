@@ -59,15 +59,16 @@ sequenceDiagram
     participant AgentB as Agent B (Claude Code)
 
     AgentA->>API: POST /send {from, to, message}
+    API->>API: resolve workspace from Bearer token
     API->>API: assertSafeId(from), assertSafeId(to)
-    API->>Valkey: XADD inbox:{to} ... (MAXLEN ~1000)
-    API->>Valkey: PUBLISH notify:{to} messageId
+    API->>Valkey: XADD inbox:{workspace}:{to} ... (MAXLEN ~1000)
+    API->>Valkey: PUBLISH notify:{workspace}:{to} messageId
     API-->>AgentA: 200 {message}
 
     Valkey-->>API: pub/sub delivers messageId
     API-->>WatcherB: SSE event: data: {messageId}
     WatcherB->>API: GET /peek?code=B (fetch full message)
-    API->>Valkey: XRANGE inbox:B - +
+    API->>Valkey: XRANGE inbox:{workspace}:B - +
     Valkey-->>API: messages
     API-->>WatcherB: {messages}
     WatcherB->>AgentB: print notification, exit(2) -> asyncRewake
@@ -82,8 +83,8 @@ Stream until acknowledged (`XDEL`).
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Registered: POST /register\n(SET presence:{code} EX 30)
-    Registered --> Registered: POST /heartbeat every 15s\n(EXPIRE presence:{code} 30)
+    [*] --> Registered: POST /register\n(SET presence:{workspace}:{code} EX 30)
+    Registered --> Registered: POST /heartbeat every 15s\n(EXPIRE presence:{workspace}:{code} 30)
     Registered --> Expired: no heartbeat for 30s\n(agent crashed, network lost)
     Registered --> [*]: process exits normally\n(local unregisterSync)
     Expired --> [*]: key auto-deleted by Valkey TTL
