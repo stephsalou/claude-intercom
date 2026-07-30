@@ -100,7 +100,7 @@ Bun.serve({
           return json({ error: "from, to and message required" }, 400);
         }
         const projectOnly = body.to === "all" ? body.project : undefined;
-        const msg = await messages.sendMessage(body.from, body.to, body.message, undefined, projectOnly);
+        const msg = await messages.sendMessage(body.from, body.to, body.message, body.reply_to, projectOnly);
         return json({ message: msg });
       }
 

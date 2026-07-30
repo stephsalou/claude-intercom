@@ -1,4 +1,5 @@
 import { findMyCodeSync, peekMessagesSync } from "./store.js";
+import * as remoteClient from "./mcpClient.js";
 
 // Read stdin to check if this is an intercom tool call (skip to avoid duplicates)
 let input = "";
@@ -23,7 +24,9 @@ const code = findMyCodeSync();
 if (!code) process.exit(0);
 
 // Check inbox
-const messages = peekMessagesSync(code);
+const messages = remoteClient.isRemote
+  ? await remoteClient.peekMessages(code).catch(() => [])
+  : peekMessagesSync(code);
 if (messages.length === 0) process.exit(0);
 
 // Output messages — this gets injected into the agent's context

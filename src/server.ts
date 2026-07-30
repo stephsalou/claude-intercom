@@ -2,18 +2,20 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import {
-  register,
-  unregisterSync,
   registerSessionSync,
   unregisterSessionSync,
   generateCode,
   detectProject,
-  sendMessage,
-  peekMessages,
-  ackMessage,
-  ackAll,
-  listAgents,
 } from "./store.js";
+import * as localStore from "./store.js";
+import * as remoteClient from "./mcpClient.js";
+
+// Session linking (PID ancestry -> agent code, for hook.ts/watcher.ts) is always
+// local — it's process bookkeeping, not message storage. Message/presence storage
+// switches to the hosted API when INTERCOM_API_URL is set, local filesystem otherwise.
+const backend = remoteClient.isRemote ? remoteClient : localStore;
+const { register, sendMessage, peekMessages, ackMessage, ackAll, listAgents } = backend;
+const unregisterSync = remoteClient.isRemote ? remoteClient.unregisterSync : localStore.unregisterSync;
 
 const agentCode = generateCode();
 const pid = process.pid;
