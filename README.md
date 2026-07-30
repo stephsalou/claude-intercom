@@ -240,6 +240,7 @@ heartbeats — no manual cleanup needed.
 | `/ack` | POST | `{code, message_id}` | |
 | `/ack_all` | POST | `{code}` | |
 | `/events` | GET | `?code=X` | Server-Sent Events stream |
+| `/history` | GET | `?code=X&since=<iso>&limit=100` | Durable log (Postgres) — includes acked messages |
 
 The local MCP server, hook, and watcher can use this API instead of the local
 filesystem store — see [Talk to agents on other machines](#4-optional-talk-to-agents-on-other-machines).

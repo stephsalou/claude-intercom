@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { valkey } from "./client.js";
 import { assertSafeId } from "../safeId.js";
 import { listAgents } from "./presenceStore.js";
+import { recordMessage, markAcked } from "../pg/historyRepo.js";
 import type { Message } from "../store.js";
 
 const MAX_STREAM_LEN = 1000;
@@ -48,7 +49,7 @@ async function writeToInbox(
   );
   const id = `msg-${streamId}`;
   await valkey.publish(`notify:${workspace}:${recipient}`, id);
-  return {
+  const msg: Message = {
     id,
     from,
     to: recipient,
@@ -56,6 +57,8 @@ async function writeToInbox(
     timestamp,
     reply_to: replyTo ?? null,
   };
+  await recordMessage(workspace, msg); // best-effort — errors are logged, not thrown
+  return msg;
 }
 
 function streamIdFromMessageId(messageId: string): string {
@@ -109,6 +112,7 @@ export async function ackMessage(workspace: string, code: string, messageId: str
   assertSafeId(code, "agent code");
   const streamId = streamIdFromMessageId(messageId);
   const deleted = await valkey.xdel(`inbox:${workspace}:${code}`, streamId);
+  if (deleted === 1) await markAcked(workspace, messageId);
   return deleted === 1;
 }
 

@@ -2,6 +2,7 @@ import * as presence from "../valkey/presenceStore.js";
 import * as messages from "../valkey/messageStore.js";
 import { onNewMessage } from "../valkey/subscribe.js";
 import { resolveWorkspace, extractBearerToken } from "./auth.js";
+import { history } from "../pg/historyRepo.js";
 
 const PORT = Number(process.env.PORT ?? 8787);
 
@@ -154,6 +155,15 @@ Bun.serve({
 
       if (url.pathname === "/events" && req.method === "GET") {
         return handleEvents(workspace, url);
+      }
+
+      if (url.pathname === "/history" && req.method === "GET") {
+        const code = url.searchParams.get("code");
+        if (!code) return json({ error: "code query param required" }, 400);
+        const since = url.searchParams.get("since") ?? undefined;
+        const limit = Number(url.searchParams.get("limit") ?? 100);
+        const rows = await history(workspace, code, since, limit);
+        return json({ messages: rows });
       }
 
       return json({ error: "not found" }, 404);
