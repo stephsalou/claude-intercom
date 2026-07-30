@@ -9,6 +9,13 @@ services:
         aliases:
           - intercom-api
 
+  web:
+    networks:
+      default:
+      bunkeraio_default:
+        aliases:
+          - intercom-dash
+
 networks:
   bunkeraio_default:
     external: true

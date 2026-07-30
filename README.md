@@ -241,12 +241,29 @@ heartbeats — no manual cleanup needed.
 | `/ack_all` | POST | `{code}` | |
 | `/events` | GET | `?code=X` | Server-Sent Events stream |
 | `/history` | GET | `?code=X&since=<iso>&limit=100` | Durable log (Postgres) — includes acked messages |
-| `/dashboard` | GET | — | Web UI — open `https://<host>/dashboard` in a browser, paste a workspace token, watch agents live |
+| `/dashboard` | GET | — | Minimal built-in HTML dashboard (paste a token). Superseded by the Next.js app in `web/` — see below |
 | `/webhooks` | POST | `{url, events: ["broadcast"]}` | Register a webhook for your workspace |
 | `/webhooks` | GET | — | List your workspace's registered webhooks |
 
 The local MCP server, hook, and watcher can use this API instead of the local
 filesystem store — see [Talk to agents on other machines](#4-optional-talk-to-agents-on-other-machines).
+
+## Web dashboard (`web/`)
+
+A full Next.js app with real username/password accounts (one account can access
+several workspaces), replacing the built-in `/dashboard` page. It never exposes a raw
+API token to the browser — the server resolves the right token per request from the
+account's granted workspaces and proxies to the API.
+
+Deployed as a fourth `web` service alongside `valkey`/`postgres`/`api`
+(`docker-compose.yml`). Provision an account from the repo root:
+
+```bash
+DATABASE_URL=postgres://intercom:<password>@localhost:5432/intercom \
+  bun scripts/create-user.ts <username> <password> <workspace>
+```
+
+See [`web/README.md`](web/README.md) for local development.
 
 ## Requirements
 
