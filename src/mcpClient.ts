@@ -25,7 +25,9 @@ export async function register(code: string, _pid: number, project: string): Pro
   await call("/register", { method: "POST", body: JSON.stringify({ code, project }) });
   if (!heartbeatTimer) {
     heartbeatTimer = setInterval(() => {
-      call("/heartbeat", { method: "POST", body: JSON.stringify({ code }) }).catch(() => {});
+      // project rides along so the server can re-register (self-heal) if this
+      // presence key already expired — a bare EXPIRE can't resurrect a missing key.
+      call("/heartbeat", { method: "POST", body: JSON.stringify({ code, project }) }).catch(() => {});
     }, 15_000);
     heartbeatTimer.unref?.();
   }

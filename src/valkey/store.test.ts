@@ -24,6 +24,15 @@ test.skipIf(!reachable)("presence register/heartbeat/expire", async () => {
   await presence!.unregister("t-aaaa", "ws1");
 });
 
+test.skipIf(!reachable)("heartbeat self-heals after presence already expired/gone", async () => {
+  await presence!.unregister("t-ghost", "ws1"); // ensure no stale key
+  expect(await presence!.heartbeat("t-ghost", "ws1")).toBe(false); // no project → can't heal
+  expect(await presence!.heartbeat("t-ghost", "ws1", "demo")).toBe(true); // heals by re-registering
+  const agents = await presence!.listAgents("ws1", "demo");
+  expect(agents.some((a) => a.code === "t-ghost")).toBe(true);
+  await presence!.unregister("t-ghost", "ws1");
+});
+
 test.skipIf(!reachable)("send/peek/ack round trip via streams", async () => {
   await presence!.register("t-aaaa", "demo", "ws1");
   await presence!.register("t-bbbb", "demo", "ws1");

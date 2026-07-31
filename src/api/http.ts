@@ -97,7 +97,7 @@ Bun.serve({
       if (url.pathname === "/heartbeat" && req.method === "POST") {
         const body = await readJson(req);
         if (!body?.code) return json({ error: "code required" }, 400);
-        const ok = await presence.heartbeat(body.code, workspace);
+        const ok = await presence.heartbeat(body.code, workspace, body.project);
         return json({ ok });
       }
 

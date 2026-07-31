@@ -16,11 +16,17 @@ export async function register(code: string, project: string, workspace: string)
   await valkey.set(`presence:${workspace}:${code}`, JSON.stringify(info), "EX", TTL_SECONDS);
 }
 
-export async function heartbeat(code: string, workspace: string): Promise<boolean> {
+export async function heartbeat(code: string, workspace: string, project?: string): Promise<boolean> {
   assertSafeId(code, "agent code");
   assertSafeId(workspace, "workspace");
   const result = await valkey.expire(`presence:${workspace}:${code}`, TTL_SECONDS);
-  return result === 1;
+  if (result === 1) return true;
+  // Key already expired (e.g. a prolonged network outage outlasted the 30s TTL) — a
+  // plain EXPIRE can never resurrect it, so this agent would stay invisible until its
+  // process restarts. Re-register instead, if we know enough to.
+  if (!project) return false;
+  await register(code, project, workspace);
+  return true;
 }
 
 export async function unregister(code: string, workspace: string): Promise<void> {

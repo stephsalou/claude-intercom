@@ -103,10 +103,14 @@ if (remoteClient.isRemote) {
     }
     process.exit(0);
   } catch {
-    // SSE unavailable (e.g. proxy stripped it) — fall back to polling
-    for (let i = 0; i < 150; i++) {
+    // SSE unavailable (e.g. proxy stripped it) — fall back to polling. Several agents
+    // sharing one egress IP hammering every 2s is what tripped the WAF's abuse
+    // detection and 403'd everyone (including future SSE attempts) into this same
+    // fallback — a self-reinforcing storm. Longer interval + jitter keeps concurrent
+    // agents from bunching up on the same tick.
+    for (let i = 0; i < 40; i++) {
       if (await checkAndNotifyRemote()) process.exit(2);
-      await Bun.sleep(2000);
+      await Bun.sleep(8000 + Math.random() * 4000);
     }
     process.exit(0);
   }
