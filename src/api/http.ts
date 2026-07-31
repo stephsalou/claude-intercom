@@ -63,6 +63,10 @@ async function handleEvents(workspace: string, url: URL): Promise<Response> {
 
 Bun.serve({
   port: PORT,
+  // Default is 10s — shorter than the SSE heartbeat (15s) in handleEvents, so every
+  // /events connection was getting killed by the server itself right before its first
+  // ping. Bun's max is 255s; comfortably above our ping interval.
+  idleTimeout: 255,
   async fetch(req) {
     const url = new URL(req.url);
 
