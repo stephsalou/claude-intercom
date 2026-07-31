@@ -11,6 +11,7 @@ import {
   grantWorkspaceAccess,
   updateMemberRole,
   removeMemberAccess,
+  isLastAdmin,
   type Role,
 } from "@/db/queries";
 
@@ -56,6 +57,8 @@ export async function inviteMember(
 export async function changeMemberRole(userId: number, role: Role): Promise<void> {
   const admin = await requireAdmin();
   if ("error" in admin) return;
+  // Refusing this would leave the workspace with no admin at all.
+  if (role !== "admin" && (await isLastAdmin(userId, admin.workspace))) return;
   await updateMemberRole(userId, admin.workspace, role);
   revalidatePath("/");
 }
@@ -63,6 +66,7 @@ export async function changeMemberRole(userId: number, role: Role): Promise<void
 export async function removeMember(userId: number): Promise<void> {
   const admin = await requireAdmin();
   if ("error" in admin) return;
+  if (await isLastAdmin(userId, admin.workspace)) return;
   await removeMemberAccess(userId, admin.workspace);
   revalidatePath("/");
 }

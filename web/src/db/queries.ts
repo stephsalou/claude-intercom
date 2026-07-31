@@ -76,6 +76,12 @@ export async function updateMemberRole(userId: number, workspace: string, role: 
     .where(and(eq(workspaceAccess.userId, userId), eq(workspaceAccess.workspace, workspace)));
 }
 
+export async function isLastAdmin(userId: number, workspace: string): Promise<boolean> {
+  const members = await getWorkspaceMembers(workspace);
+  const admins = members.filter((m) => m.role === "admin");
+  return admins.length === 1 && admins[0].userId === userId;
+}
+
 export async function removeMemberAccess(userId: number, workspace: string): Promise<void> {
   await db
     .delete(workspaceAccess)
