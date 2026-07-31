@@ -10,7 +10,7 @@ services:
     image: postgres:16
     restart: unless-stopped
     environment:
-      POSTGRES_USER: intercom
+      POSTGRES_USER: ${POSTGRES_USERNAME:-intercom}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-intercom}
       POSTGRES_DB: intercom
     volumes:
@@ -24,7 +24,7 @@ services:
     env_file: .env
     environment:
       VALKEY_URL: redis://valkey:6379
-      DATABASE_URL: postgres://intercom:${POSTGRES_PASSWORD:-intercom}@postgres:5432/intercom
+      DATABASE_URL: postgres://${POSTGRES_USERNAME:-intercom}:${POSTGRES_PASSWORD:-intercom}@postgres:5432/intercom
     depends_on:
       - valkey
       - postgres
@@ -37,7 +37,7 @@ services:
     image: claude-intercom-web:latest
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgres://intercom:${POSTGRES_PASSWORD:-intercom}@postgres:5432/intercom
+      DATABASE_URL: postgres://${POSTGRES_USERNAME:-intercom}:${POSTGRES_PASSWORD:-intercom}@postgres:5432/intercom
       SESSION_SECRET: ${SESSION_SECRET:-dev-only-insecure-secret-change-me}
       INTERCOM_API_URL: http://api:8787
       VALKEY_URL: redis://valkey:6379
