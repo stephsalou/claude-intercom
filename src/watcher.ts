@@ -1,5 +1,5 @@
 import { watch } from "node:fs";
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { findMyCodeSync, peekMessagesSync, type Message } from "./store.js";
 import * as remoteClient from "./mcpClient.js";
@@ -31,14 +31,29 @@ function isPidAlive(pid: number): boolean {
 }
 
 const lockFile = join(SESSIONS_DIR, `${code}.watcher.lock`);
-if (existsSync(lockFile)) {
-  const existingPid = parseInt(readFileSync(lockFile, "utf-8").trim(), 10);
-  if (existingPid && isPidAlive(existingPid)) {
-    process.exit(0);
+
+// `wx` makes the create step atomic — two watchers racing here can't both pass a
+// check-then-write (the previous existsSync + writeFileSync was exactly that race).
+function acquireLock(): boolean {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      writeFileSync(lockFile, String(process.pid), { flag: "wx" });
+      return true;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+      const existingPid = parseInt(readFileSync(lockFile, "utf-8").trim(), 10);
+      if (existingPid && isPidAlive(existingPid)) return false;
+      // Stale lock left by a watcher that crashed instead of exiting cleanly.
+      try {
+        unlinkSync(lockFile);
+      } catch {}
+    }
   }
+  return false;
 }
+
 mkdirSync(SESSIONS_DIR, { recursive: true });
-writeFileSync(lockFile, String(process.pid));
+if (!acquireLock()) process.exit(0);
 process.on("exit", () => {
   try {
     unlinkSync(lockFile);
