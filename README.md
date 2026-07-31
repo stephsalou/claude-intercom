@@ -99,9 +99,25 @@ Add to `~/.claude/settings.json` under `"hooks"`:
 }
 ```
 
-### 3. (Optional) Add the skill
+### 3. (Optional) Add the skill and its two subagents
 
-Copy `skill/SKILL.md` to `~/.claude/skills/intercom/SKILL.md` so agents proactively coordinate.
+Copy `skill/SKILL.md` to `~/.claude/skills/intercom/SKILL.md` so agents proactively
+coordinate, and copy `agents/intercom-communicator.md` and `agents/intercom-executor.md`
+to `~/.claude/agents/` so the skill can delegate to them:
+
+```bash
+mkdir -p ~/.claude/skills/intercom ~/.claude/agents
+cp skill/SKILL.md ~/.claude/skills/intercom/SKILL.md
+cp agents/intercom-communicator.md agents/intercom-executor.md ~/.claude/agents/
+```
+
+The skill splits messaging from implementation across two subagents instead of
+calling intercom tools inline: `intercom-communicator` owns the inbox and composes
+outgoing messages from a structured template (only has intercom tools, no file/shell
+access); `intercom-executor` does the actual work and hands back a short status block
+for the communicator to turn into one message (only has file/shell tools, no
+intercom access). The main thread orchestrates both — see `skill/SKILL.md` for the
+full workflow.
 
 ### 4. (Optional) Talk to agents on other machines
 
