@@ -14,6 +14,7 @@ probe.disconnect();
 
 const presence = reachable ? await import("./presenceStore.ts") : null;
 const messages = reachable ? await import("./messageStore.ts") : null;
+const history = reachable ? await import("../pg/historyRepo.ts") : null;
 
 test.skipIf(!reachable)("presence register/heartbeat/expire", async () => {
   await presence!.register("t-aaaa", "demo", "ws1");
@@ -35,6 +36,21 @@ test.skipIf(!reachable)("send/peek/ack round trip via streams", async () => {
   expect(after.some((m) => m.id === msg.id)).toBe(false);
   await presence!.unregister("t-aaaa", "ws1");
   await presence!.unregister("t-bbbb", "ws1");
+});
+
+test.skipIf(!reachable)("ackAll marks acked_at in history, like ackMessage does", async () => {
+  await presence!.register("t-cccc", "demo", "ws1");
+  await presence!.register("t-dddd", "demo", "ws1");
+  const msg = await messages!.sendMessage("ws1", "t-cccc", "t-dddd", "batch");
+  const acked = await messages!.ackAll("ws1", "t-dddd");
+  expect(acked).toBe(1);
+
+  const rows = await history!.history("ws1", "t-dddd");
+  const row = rows.find((r) => r.id === msg.id);
+  expect(row?.acked_at).not.toBeNull();
+
+  await presence!.unregister("t-cccc", "ws1");
+  await presence!.unregister("t-dddd", "ws1");
 });
 
 test.skipIf(!reachable)("rejects path traversal in agent code", async () => {

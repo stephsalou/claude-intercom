@@ -138,5 +138,7 @@ export async function ackAll(workspace: string, code: string): Promise<number> {
   const messages = await peekMessages(workspace, code);
   if (messages.length === 0) return 0;
   const streamIds = messages.map((m) => streamIdFromMessageId(m.id));
-  return valkey.xdel(`inbox:${workspace}:${code}`, ...streamIds);
+  const deleted = await valkey.xdel(`inbox:${workspace}:${code}`, ...streamIds);
+  await Promise.all(messages.map((m) => markAcked(workspace, m.id)));
+  return deleted;
 }
