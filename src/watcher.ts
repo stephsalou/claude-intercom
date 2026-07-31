@@ -1,10 +1,12 @@
 import { watch } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { findMyCodeSync, peekMessagesSync, type Message } from "./store.js";
 import * as remoteClient from "./mcpClient.js";
 
 const HOME = process.env.HOME ?? "~";
 const MESSAGES_DIR = join(HOME, ".claude", "mcp-intercom", "store", "messages");
+const SESSIONS_DIR = join(HOME, ".claude", "mcp-intercom", "store", "sessions");
 
 let code: string | null = null;
 for (let attempt = 0; attempt < 15; attempt++) {
@@ -13,6 +15,35 @@ for (let attempt = 0; attempt < 15; attempt++) {
   await Bun.sleep(2000);
 }
 if (!code) process.exit(0);
+
+// Every SessionStart/Stop hook trigger spawns a fresh watcher. Without a lock,
+// several sessions (or a session that never got a clean Stop event) pile up
+// duplicate watchers for the same agent, multiplying request volume against
+// the API. Only one watcher runs per agent code at a time — a new one exits
+// immediately if the previous one is still alive.
+function isPidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const lockFile = join(SESSIONS_DIR, `${code}.watcher.lock`);
+if (existsSync(lockFile)) {
+  const existingPid = parseInt(readFileSync(lockFile, "utf-8").trim(), 10);
+  if (existingPid && isPidAlive(existingPid)) {
+    process.exit(0);
+  }
+}
+mkdirSync(SESSIONS_DIR, { recursive: true });
+writeFileSync(lockFile, String(process.pid));
+process.on("exit", () => {
+  try {
+    unlinkSync(lockFile);
+  } catch {}
+});
 
 function announce(messages: Message[]): void {
   const lines = messages.map(
