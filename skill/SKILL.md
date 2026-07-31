@@ -72,6 +72,13 @@ When `intercom-communicator` surfaces a message during a check-in:
 - Inbox getting cluttered with things already acted on? `ack_all` clears it in one
   call — don't leave stale messages sitting there "just in case"
 
+## Works inside agent teams too
+
+If this session is a teammate in a Claude Code agent team, it still loads this
+project's MCP config like any normal session — intercom is available without extra
+setup. Use it when something affects agents *outside* the team (a different repo,
+a different machine): the team's shared task list only coordinates the team itself.
+
 ## Scope
 
 - `who(scope="project")` → agents on the same project (default)
