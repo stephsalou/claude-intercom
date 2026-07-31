@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+node_modules
+.git
+store/
+_bmad*
+.claude
+web/node_modules
+web/.next
+web/test-results
+front-end
+docs
+*.md
