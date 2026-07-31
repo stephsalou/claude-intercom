@@ -31,7 +31,7 @@ Terminal 1                          Terminal 2
 
 ```bash
 # Clone
-git clone https://github.com/sanztheo/claude-intercom.git ~/.claude/mcp-intercom
+git clone https://github.com/stephsalou/claude-intercom.git ~/.claude/mcp-intercom
 
 # Install deps
 cd ~/.claude/mcp-intercom && bun install
@@ -255,6 +255,20 @@ several workspaces), replacing the built-in `/dashboard` page. It never exposes 
 API token to the browser — the server resolves the right token per request from the
 account's granted workspaces and proxies to the API.
 
+Three tabs per workspace:
+
+- **Agents & flux** — live agent presence and message feed (SSE), broadcast/reply/ack
+  from the browser
+- **Utilisateurs & rôles** — invite accounts, assign a role (`admin` / `membre` /
+  `lecture`), and remove access; `lecture` (read-only) is enforced server-side, not
+  just hidden in the UI
+- **Webhooks** — register/remove HTTP callbacks for broadcast events
+
+Visual design is ported 1:1 from a design mock (`front-end/`, the "Organic" design
+system) — see [`docs/service-and-endpoints.md`](docs/service-and-endpoints.md) for the
+full screen-by-screen reference, and `web/tests/` for the Playwright suite that checks
+the app's CSS/spacing/animations against that mock.
+
 Deployed as a fourth `web` service alongside `valkey`/`postgres`/`api`
 (`docker-compose.yml`). Provision an account from the repo root:
 
@@ -262,6 +276,10 @@ Deployed as a fourth `web` service alongside `valkey`/`postgres`/`api`
 DATABASE_URL=postgres://intercom:<password>@localhost:5432/intercom \
   bun scripts/create-user.ts <username> <password> <workspace>
 ```
+
+The first account created for a workspace this way is granted the `admin` role, so it
+can invite teammates from the **Utilisateurs & rôles** tab afterwards without touching
+the CLI again.
 
 See [`web/README.md`](web/README.md) for local development.
 
