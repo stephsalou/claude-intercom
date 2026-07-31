@@ -5,17 +5,17 @@ services:
   api:
     networks:
       default:
-      bunkeraio_default:
+      publi_network:
         aliases:
           - intercom-api
 
   web:
     networks:
       default:
-      bunkeraio_default:
+      publi_network:
         aliases:
           - intercom-dash
 
 networks:
-  bunkeraio_default:
+  publi_network:
     external: true
