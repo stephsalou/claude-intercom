@@ -12,6 +12,19 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE INDEX IF NOT EXISTS messages_workspace_to_code_timestamp_idx
   ON messages (workspace, to_code, timestamp);
 
+-- Audit trail of tool calls (who/send/reply/peek/ack/ack_all) per agent.
+CREATE TABLE IF NOT EXISTS command_log (
+  id serial PRIMARY KEY,
+  workspace text NOT NULL,
+  code text NOT NULL,
+  action text NOT NULL,
+  detail text,
+  timestamp timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS command_log_workspace_code_timestamp_idx
+  ON command_log (workspace, code, timestamp);
+
 -- Dashboard accounts (web/) — username/password auth, one user can access several
 -- workspaces (and a workspace could in principle be shared by several users).
 CREATE TABLE IF NOT EXISTS users (

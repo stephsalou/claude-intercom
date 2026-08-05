@@ -24,6 +24,7 @@ export interface PresenceInfo {
   project: string;
   started: string;
   name?: string;
+  mode?: "sse" | "poll";
 }
 
 export interface Message {
@@ -174,6 +175,7 @@ export function unregisterSync(code: string): void {
 
 export async function listAgents(
   projectFilter?: string,
+  _callerCode?: string, // command-log audit is a remote/hosted-only concept
 ): Promise<PresenceInfo[]> {
   await ensureDirs();
   const files = await readdir(PRESENCE_DIR);

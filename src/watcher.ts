@@ -81,39 +81,51 @@ if (remoteClient.isRemote) {
 
   const apiUrl = (process.env.INTERCOM_API_URL ?? "").replace(/\/$/, "");
   const token = process.env.INTERCOM_API_TOKEN ?? "";
-  const controller = new AbortController();
-  setTimeout(() => controller.abort(), 300_000); // safety timeout: 5 minutes max
+  const deadline = Date.now() + 300_000; // safety timeout: 5 minutes max
 
-  try {
-    const res = await fetch(`${apiUrl}/events?code=${encodeURIComponent(code)}`, {
-      headers: { authorization: `Bearer ${token}` },
-      signal: controller.signal,
-    });
-    if (!res.ok || !res.body) throw new Error(`SSE connect failed: ${res.status}`);
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value);
-      if (chunk.includes("data:") && (await checkAndNotifyRemote())) {
-        controller.abort();
-        process.exit(2);
+  // "found" = a message arrived (caller exits). "closed"/"failed" both mean the SSE
+  // connection ended without one — the caller decides whether to retry SSE or poll.
+  async function trySSE(): Promise<"found" | "closed" | "failed"> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), Math.max(0, deadline - Date.now()));
+    try {
+      const res = await fetch(`${apiUrl}/events?code=${encodeURIComponent(code)}`, {
+        headers: { authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      });
+      if (!res.ok || !res.body) return "failed";
+      remoteClient.reportMode(code!, "sse");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) return "closed";
+        const chunk = decoder.decode(value);
+        if (chunk.includes("data:") && (await checkAndNotifyRemote())) {
+          controller.abort();
+          return "found";
+        }
       }
+    } catch {
+      return "failed";
+    } finally {
+      clearTimeout(timeout);
     }
-    process.exit(0);
-  } catch {
-    // SSE unavailable (e.g. proxy stripped it) — fall back to polling. Several agents
-    // sharing one egress IP hammering every 2s is what tripped the WAF's abuse
-    // detection and 403'd everyone (including future SSE attempts) into this same
-    // fallback — a self-reinforcing storm. Longer interval + jitter keeps concurrent
-    // agents from bunching up on the same tick.
-    for (let i = 0; i < 40; i++) {
-      if (await checkAndNotifyRemote()) process.exit(2);
-      await Bun.sleep(8000 + Math.random() * 4000);
-    }
-    process.exit(0);
   }
+
+  // Retries SSE with backoff on every drop instead of committing to polling for the
+  // rest of the window — a transient WAF/proxy hiccup should self-heal in seconds,
+  // not degrade this agent to slow polling for up to 5 minutes.
+  let backoffMs = 2000;
+  while (Date.now() < deadline) {
+    const result = await trySSE();
+    if (result === "found") process.exit(2);
+    remoteClient.reportMode(code!, "poll");
+    if (await checkAndNotifyRemote()) process.exit(2);
+    await Bun.sleep(backoffMs + Math.random() * 1000);
+    backoffMs = Math.min(backoffMs * 2, 15_000);
+  }
+  process.exit(0);
 } else {
   const inbox = join(MESSAGES_DIR, code);
 

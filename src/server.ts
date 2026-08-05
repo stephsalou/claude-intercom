@@ -55,7 +55,7 @@ By default shows only agents on the same project. Set scope='all' to see everyon
   },
   async ({ scope }) => {
     const filter = scope === "project" ? project : undefined;
-    const agents = await listAgents(filter);
+    const agents = await listAgents(filter, agentCode);
     const me = agentName ? `${agentName} [${agentCode}]` : `[${agentCode}]`;
     if (agents.length <= 1) {
       return {

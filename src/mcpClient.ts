@@ -44,9 +44,16 @@ export function unregisterSync(_code: string): void {
   if (heartbeatTimer) clearInterval(heartbeatTimer);
 }
 
-export async function listAgents(projectFilter?: string): Promise<PresenceInfo[]> {
+// Fire-and-forget: lets watcher.ts (a separate short-lived process) report whether
+// it currently holds a live SSE connection or has dropped to polling.
+export function reportMode(code: string, mode: "sse" | "poll"): void {
+  call("/mode", { method: "POST", body: JSON.stringify({ code, mode }) }).catch(() => {});
+}
+
+export async function listAgents(projectFilter?: string, callerCode?: string): Promise<PresenceInfo[]> {
   const qs = new URLSearchParams({ scope: projectFilter ? "project" : "all" });
   if (projectFilter) qs.set("project", projectFilter);
+  if (callerCode) qs.set("code", callerCode);
   const { agents } = await call(`/who?${qs}`);
   return agents;
 }

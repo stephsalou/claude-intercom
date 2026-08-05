@@ -8,6 +8,13 @@ interface Agent {
   project: string;
   started: string;
   name?: string;
+  mode?: "sse" | "poll";
+}
+
+interface CommandLogEntry {
+  action: string;
+  detail: string | null;
+  timestamp: string;
 }
 
 interface IntercomMessage {
@@ -42,6 +49,8 @@ export function AgentsFluxTab({ workspace, canWrite }: { workspace: string; canW
   const [broadcastText, setBroadcastText] = useState("");
   const [announcement, setAnnouncement] = useState("");
   const [copied, setCopied] = useState(false);
+  const [historyFor, setHistoryFor] = useState<string | null>(null);
+  const [history, setHistory] = useState<CommandLogEntry[]>([]);
   const sourcesRef = useRef<Map<string, EventSource>>(new Map());
 
   const apiUrl = useCallback((path: string) => `/api/intercom/${path}${path.includes("?") ? "&" : "?"}workspace=${encodeURIComponent(workspace)}`, [workspace]);
@@ -104,6 +113,18 @@ export function AgentsFluxTab({ workspace, canWrite }: { workspace: string; canW
     };
   }, []);
 
+  async function handleToggleHistory(code: string) {
+    if (historyFor === code) {
+      setHistoryFor(null);
+      return;
+    }
+    setHistoryFor(code);
+    const res = await fetch(apiUrl(`commands?code=${encodeURIComponent(code)}`));
+    if (!res.ok) return;
+    const { commands } = (await res.json()) as { commands: CommandLogEntry[] };
+    setHistory(commands);
+  }
+
   async function handleAck(messageId: string, code: string) {
     setAckedIds((prev) => new Set(prev).add(messageId));
     await fetch(apiUrl("ack"), {
@@ -157,39 +178,66 @@ export function AgentsFluxTab({ workspace, canWrite }: { workspace: string; canW
         <h3 style={{ margin: 0 }}>Agents actifs ({agents.length})</h3>
 
         {agents.length > 0 ? (
-          agents.map((agent) => (
-            <div
-              key={agent.code}
-              className="card elev-sm"
-              style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: "12px 14px" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span
-                  aria-hidden
-                  style={{
-                    width: 9,
-                    height: 9,
-                    borderRadius: "50%",
-                    background: "var(--color-accent-2)",
-                    animation: "pulse 2s ease-in-out infinite",
-                    flex: "none",
-                  }}
-                />
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 14, fontVariantNumeric: "tabular-nums" }}>
-                    {agent.name ? `${agent.name} (${agent.code})` : agent.code}{" "}
-                    <span className="sr-only">(en ligne)</span>
+          agents.map((agent) => {
+            const syncLabel = agent.mode === "poll" ? "polling" : "temps réel";
+            const open = historyFor === agent.code;
+            return (
+              <div key={agent.code} className="card elev-sm" style={{ padding: "12px 14px", gap: 8 }}>
+                <div style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span
+                      aria-hidden
+                      title={syncLabel}
+                      style={{
+                        width: 9,
+                        height: 9,
+                        borderRadius: "50%",
+                        background: agent.mode === "poll" ? "var(--color-warning, #d29922)" : "var(--color-accent-2)",
+                        animation: agent.mode === "poll" ? "none" : "pulse 2s ease-in-out infinite",
+                        flex: "none",
+                      }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 14, fontVariantNumeric: "tabular-nums" }}>
+                        {agent.name ? `${agent.name} (${agent.code})` : agent.code}{" "}
+                        <span className="sr-only">({syncLabel})</span>
+                      </div>
+                      <div className="text-muted" style={{ fontSize: 12 }}>
+                        {agent.project} · {syncLabel}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-muted" style={{ fontSize: 12 }}>
-                    {agent.project}
-                  </div>
+                  <span className="text-muted" style={{ fontSize: 12, fontVariantNumeric: "tabular-nums" }}>
+                    {relativeUptime(agent.started)}
+                  </span>
                 </div>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ fontSize: 11, padding: "2px 8px", alignSelf: "flex-start" }}
+                  onClick={() => handleToggleHistory(agent.code)}
+                >
+                  {open ? "Masquer l'historique" : "Historique"}
+                </button>
+                {open && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 160, overflow: "auto" }}>
+                    {history.length > 0 ? (
+                      history.map((entry, i) => (
+                        <div key={i} className="text-muted" style={{ fontSize: 11, fontVariantNumeric: "tabular-nums" }}>
+                          {formatTime(entry.timestamp)} — {entry.action}
+                          {entry.detail ? ` (${entry.detail})` : ""}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-muted" style={{ fontSize: 11 }}>
+                        Aucune commande enregistrée.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <span className="text-muted" style={{ fontSize: 12, fontVariantNumeric: "tabular-nums" }}>
-                {relativeUptime(agent.started)}
-              </span>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="card elev-sm" style={{ gap: 10, padding: 18 }}>
             <p style={{ margin: 0, fontSize: 13 }}>Aucun agent connecté sur {workspace} pour l&apos;instant.</p>

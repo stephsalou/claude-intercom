@@ -41,6 +41,22 @@ test.skipIf(!reachable)("register/heartbeat carry an optional friendly name, cod
   await presence!.unregister("t-named", "ws1");
 });
 
+test.skipIf(!reachable)("setMode annotates presence with sse/poll, no-ops once presence is gone", async () => {
+  await presence!.register("t-mode", "demo", "ws1");
+  await presence!.setMode("t-mode", "ws1", "sse");
+  let agents = await presence!.listAgents("ws1", "demo");
+  expect(agents.find((a) => a.code === "t-mode")?.mode).toBe("sse");
+
+  await presence!.setMode("t-mode", "ws1", "poll");
+  agents = await presence!.listAgents("ws1", "demo");
+  expect(agents.find((a) => a.code === "t-mode")?.mode).toBe("poll");
+
+  await presence!.unregister("t-mode", "ws1");
+  await presence!.setMode("t-mode", "ws1", "sse"); // no presence left — must not throw or resurrect it
+  agents = await presence!.listAgents("ws1", "demo");
+  expect(agents.some((a) => a.code === "t-mode")).toBe(false);
+});
+
 test.skipIf(!reachable)("heartbeat self-heals after presence already expired/gone", async () => {
   await presence!.unregister("t-ghost", "ws1"); // ensure no stale key
   expect(await presence!.heartbeat("t-ghost", "ws1")).toBe(false); // no project → can't heal

@@ -3,6 +3,7 @@ import * as messages from "../valkey/messageStore.js";
 import { onNewMessage } from "../valkey/subscribe.js";
 import { resolveWorkspace, extractBearerToken } from "./auth.js";
 import { history, purgeOldHistory } from "../pg/historyRepo.js";
+import { recordCommand, listCommands, purgeOldCommands } from "../pg/commandLogRepo.js";
 import { RETENTION_MS } from "../valkey/messageStore.js";
 import { isRateLimited } from "./rateLimit.js";
 import { registerWebhook, listWebhooks, deleteWebhook } from "../valkey/webhookStore.js";
@@ -102,11 +103,22 @@ Bun.serve({
         return json({ ok });
       }
 
+      if (url.pathname === "/mode" && req.method === "POST") {
+        const body = await readJson(req);
+        if (!body?.code || (body.mode !== "sse" && body.mode !== "poll")) {
+          return json({ error: "code and mode ('sse'|'poll') required" }, 400);
+        }
+        await presence.setMode(body.code, workspace, body.mode);
+        return json({ ok: true });
+      }
+
       if (url.pathname === "/who" && req.method === "GET") {
         const scope = url.searchParams.get("scope") ?? "project";
         const project = url.searchParams.get("project") ?? undefined;
         const filter = scope === "project" ? project : undefined;
         const agents = await presence.listAgents(workspace, filter);
+        const caller = url.searchParams.get("code");
+        if (caller) await recordCommand(workspace, caller, "who", `scope=${scope}`);
         return json({ agents });
       }
 
@@ -130,6 +142,7 @@ Bun.serve({
           body.reply_to,
           projectOnly,
         );
+        await recordCommand(workspace, body.from, "send", `to=${body.to}`);
         return json({ message: msg });
       }
 
@@ -149,6 +162,7 @@ Bun.serve({
           body.message_id,
         );
         await messages.ackMessage(workspace, body.from, body.message_id);
+        await recordCommand(workspace, body.from, "reply", `message_id=${body.message_id}`);
         return json({ message: msg });
       }
 
@@ -156,6 +170,7 @@ Bun.serve({
         const code = url.searchParams.get("code");
         if (!code) return json({ error: "code query param required" }, 400);
         const inbox = await messages.peekMessages(workspace, code);
+        await recordCommand(workspace, code, "peek", `count=${inbox.length}`);
         return json({ messages: inbox });
       }
 
@@ -163,6 +178,7 @@ Bun.serve({
         const body = await readJson(req);
         if (!body?.code || !body?.message_id) return json({ error: "code and message_id required" }, 400);
         const ok = await messages.ackMessage(workspace, body.code, body.message_id);
+        await recordCommand(workspace, body.code, "ack", `message_id=${body.message_id}`);
         return json({ ok }, ok ? 200 : 404);
       }
 
@@ -170,6 +186,7 @@ Bun.serve({
         const body = await readJson(req);
         if (!body?.code) return json({ error: "code required" }, 400);
         const count = await messages.ackAll(workspace, body.code);
+        await recordCommand(workspace, body.code, "ack_all", `count=${count}`);
         return json({ count });
       }
 
@@ -184,6 +201,14 @@ Bun.serve({
         const limit = Number(url.searchParams.get("limit") ?? 100);
         const rows = await history(workspace, code, since, limit);
         return json({ messages: rows });
+      }
+
+      if (url.pathname === "/commands" && req.method === "GET") {
+        const code = url.searchParams.get("code");
+        if (!code) return json({ error: "code query param required" }, 400);
+        const limit = Number(url.searchParams.get("limit") ?? 100);
+        const commands = await listCommands(workspace, code, limit);
+        return json({ commands });
       }
 
       if (url.pathname === "/webhooks" && req.method === "POST") {
@@ -218,4 +243,5 @@ console.log(`intercom API listening on :${PORT}`);
 // Enforces the same 10h retention floor as the Valkey inbox (messageStore.ts).
 setInterval(() => {
   purgeOldHistory(RETENTION_MS).catch((err) => console.error("purgeOldHistory failed:", err));
+  purgeOldCommands(RETENTION_MS).catch((err) => console.error("purgeOldCommands failed:", err));
 }, 60 * 60 * 1000).unref();

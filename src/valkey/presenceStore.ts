@@ -40,6 +40,21 @@ export async function heartbeat(
   return true;
 }
 
+// Reports whether this agent's watcher currently has a live SSE connection ("sse")
+// or has dropped to polling ("poll") — read-modify-write since presence is a single
+// JSON blob, not a hash. A no-op if presence has already expired; the next
+// register/heartbeat will recreate it without a mode until the next SSE event.
+export async function setMode(code: string, workspace: string, mode: "sse" | "poll"): Promise<void> {
+  assertSafeId(code, "agent code");
+  assertSafeId(workspace, "workspace");
+  const key = `presence:${workspace}:${code}`;
+  const [raw, ttl] = await Promise.all([valkey.get(key), valkey.ttl(key)]);
+  if (!raw || ttl <= 0) return;
+  const info: PresenceInfo = JSON.parse(raw);
+  info.mode = mode;
+  await valkey.set(key, JSON.stringify(info), "EX", ttl);
+}
+
 export async function unregister(code: string, workspace: string): Promise<void> {
   assertSafeId(code, "agent code");
   assertSafeId(workspace, "workspace");
