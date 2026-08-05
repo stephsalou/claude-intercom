@@ -21,13 +21,18 @@ async function call(path: string, options: RequestInit = {}): Promise<any> {
 
 let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
 
-export async function register(code: string, _pid: number, project: string): Promise<void> {
-  await call("/register", { method: "POST", body: JSON.stringify({ code, project }) });
+export async function register(
+  code: string,
+  _pid: number,
+  project: string,
+  name?: string,
+): Promise<void> {
+  await call("/register", { method: "POST", body: JSON.stringify({ code, project, name }) });
   if (!heartbeatTimer) {
     heartbeatTimer = setInterval(() => {
-      // project rides along so the server can re-register (self-heal) if this
+      // project/name ride along so the server can re-register (self-heal) if this
       // presence key already expired — a bare EXPIRE can't resurrect a missing key.
-      call("/heartbeat", { method: "POST", body: JSON.stringify({ code, project }) }).catch(() => {});
+      call("/heartbeat", { method: "POST", body: JSON.stringify({ code, project, name }) }).catch(() => {});
     }, 15_000);
     heartbeatTimer.unref?.();
   }

@@ -7,6 +7,7 @@ interface Agent {
   code: string;
   project: string;
   started: string;
+  name?: string;
 }
 
 interface IntercomMessage {
@@ -176,7 +177,8 @@ export function AgentsFluxTab({ workspace, canWrite }: { workspace: string; canW
                 />
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 14, fontVariantNumeric: "tabular-nums" }}>
-                    {agent.code} <span className="sr-only">(en ligne)</span>
+                    {agent.name ? `${agent.name} (${agent.code})` : agent.code}{" "}
+                    <span className="sr-only">(en ligne)</span>
                   </div>
                   <div className="text-muted" style={{ fontSize: 12 }}>
                     {agent.project}
@@ -229,7 +231,7 @@ export function AgentsFluxTab({ workspace, canWrite }: { workspace: string; canW
               <option value="all">Tous les agents</option>
               {agents.map((a) => (
                 <option key={a.code} value={a.code}>
-                  {a.code}
+                  {a.name ? `${a.name} (${a.code})` : a.code}
                 </option>
               ))}
             </select>

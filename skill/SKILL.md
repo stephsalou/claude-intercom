@@ -79,6 +79,13 @@ project's MCP config like any normal session — intercom is available without e
 setup. Use it when something affects agents *outside* the team (a different repo,
 a different machine): the team's shared task list only coordinates the team itself.
 
+## Friendly names
+
+Set `INTERCOM_AGENT_NAME` (e.g. in the MCP server's env config) to give this agent a
+human-readable label shown alongside its code in `who()` and the dashboard — e.g.
+`frontend-dev [h3ja]` instead of just `[h3ja]`. The code is still what `send`/`reply`/`ack`
+actually use for routing; the name is purely cosmetic and never required.
+
 ## Scope
 
 - `who(scope="project")` → agents on the same project (default)

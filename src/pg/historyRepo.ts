@@ -1,4 +1,4 @@
-import { and, desc, eq, gt } from "drizzle-orm";
+import { and, desc, eq, gt, lt } from "drizzle-orm";
 import { db } from "./client.js";
 import { messages } from "./schema.js";
 import type { Message } from "../store.js";
@@ -58,4 +58,12 @@ export async function history(
     reply_to: r.replyTo,
     acked_at: r.ackedAt,
   }));
+}
+
+// Messages are guaranteed to be retained for at least RETENTION_MS (see
+// messageStore.ts for the matching Valkey-side cutoff) before being purged.
+export async function purgeOldHistory(retentionMs: number): Promise<number> {
+  const cutoff = new Date(Date.now() - retentionMs).toISOString();
+  const deleted = await db.delete(messages).where(lt(messages.timestamp, cutoff)).returning({ id: messages.id });
+  return deleted.length;
 }

@@ -45,4 +45,21 @@ test.skipIf(!reachable)("history is scoped by workspace", async () => {
   expect(rowsElsewhere.some((r) => r.id === msg.id)).toBe(false);
 });
 
+test.skipIf(!reachable)("purgeOldHistory deletes only rows past the retention window", async () => {
+  const RETENTION_MS = 10 * 60 * 60 * 1000;
+  const old = sampleMessage("msg-pg-test-old", {
+    to: "purge-target",
+    timestamp: new Date(Date.now() - RETENTION_MS - 60_000).toISOString(),
+  });
+  const fresh = sampleMessage("msg-pg-test-fresh", { to: "purge-target" });
+  await repo!.recordMessage("ws1", old);
+  await repo!.recordMessage("ws1", fresh);
+
+  await repo!.purgeOldHistory(RETENTION_MS);
+
+  const rows = await repo!.history("ws1", "purge-target");
+  expect(rows.some((r) => r.id === old.id)).toBe(false);
+  expect(rows.some((r) => r.id === fresh.id)).toBe(true);
+});
+
 test.skipIf(reachable)("skipped: no reachable Postgres at " + url, () => {});

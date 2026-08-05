@@ -2,7 +2,8 @@ import * as presence from "../valkey/presenceStore.js";
 import * as messages from "../valkey/messageStore.js";
 import { onNewMessage } from "../valkey/subscribe.js";
 import { resolveWorkspace, extractBearerToken } from "./auth.js";
-import { history } from "../pg/historyRepo.js";
+import { history, purgeOldHistory } from "../pg/historyRepo.js";
+import { RETENTION_MS } from "../valkey/messageStore.js";
 import { isRateLimited } from "./rateLimit.js";
 import { registerWebhook, listWebhooks, deleteWebhook } from "../valkey/webhookStore.js";
 
@@ -90,14 +91,14 @@ Bun.serve({
       if (url.pathname === "/register" && req.method === "POST") {
         const body = await readJson(req);
         if (!body?.code || !body?.project) return json({ error: "code and project required" }, 400);
-        await presence.register(body.code, body.project, workspace);
+        await presence.register(body.code, body.project, workspace, body.name);
         return json({ ok: true });
       }
 
       if (url.pathname === "/heartbeat" && req.method === "POST") {
         const body = await readJson(req);
         if (!body?.code) return json({ error: "code required" }, 400);
-        const ok = await presence.heartbeat(body.code, workspace, body.project);
+        const ok = await presence.heartbeat(body.code, workspace, body.project, body.name);
         return json({ ok });
       }
 
@@ -213,3 +214,8 @@ Bun.serve({
 });
 
 console.log(`intercom API listening on :${PORT}`);
+
+// Enforces the same 10h retention floor as the Valkey inbox (messageStore.ts).
+setInterval(() => {
+  purgeOldHistory(RETENTION_MS).catch((err) => console.error("purgeOldHistory failed:", err));
+}, 60 * 60 * 1000).unref();

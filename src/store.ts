@@ -23,6 +23,7 @@ export interface PresenceInfo {
   pid: number;
   project: string;
   started: string;
+  name?: string;
 }
 
 export interface Message {
@@ -154,12 +155,13 @@ export async function register(
   code: string,
   pid: number,
   project: string,
+  name?: string,
 ): Promise<void> {
   assertSafeId(code, "agent code");
   await ensureDirs();
   await writeFile(
     join(PRESENCE_DIR, `${code}.json`),
-    JSON.stringify({ code, pid, project, started: new Date().toISOString() }),
+    JSON.stringify({ code, pid, project, started: new Date().toISOString(), name: name || undefined }),
   );
   await mkdir(join(MESSAGES_DIR, code), { recursive: true });
 }

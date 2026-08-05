@@ -15,6 +15,7 @@ probe.disconnect();
 const presence = reachable ? await import("./presenceStore.ts") : null;
 const messages = reachable ? await import("./messageStore.ts") : null;
 const history = reachable ? await import("../pg/historyRepo.ts") : null;
+const client = reachable ? await import("./client.ts") : null;
 
 test.skipIf(!reachable)("presence register/heartbeat/expire", async () => {
   await presence!.register("t-aaaa", "demo", "ws1");
@@ -22,6 +23,22 @@ test.skipIf(!reachable)("presence register/heartbeat/expire", async () => {
   expect(agents.some((a) => a.code === "t-aaaa")).toBe(true);
   expect(await presence!.heartbeat("t-aaaa", "ws1")).toBe(true);
   await presence!.unregister("t-aaaa", "ws1");
+});
+
+test.skipIf(!reachable)("register/heartbeat carry an optional friendly name, code stays the routing id", async () => {
+  await presence!.register("t-named", "demo", "ws1", "frontend-dev");
+  let agents = await presence!.listAgents("ws1", "demo");
+  let me = agents.find((a) => a.code === "t-named");
+  expect(me?.name).toBe("frontend-dev");
+
+  // heartbeat's self-heal path also needs to carry the name through
+  await presence!.unregister("t-named", "ws1");
+  await presence!.heartbeat("t-named", "ws1", "demo", "frontend-dev");
+  agents = await presence!.listAgents("ws1", "demo");
+  me = agents.find((a) => a.code === "t-named");
+  expect(me?.name).toBe("frontend-dev");
+
+  await presence!.unregister("t-named", "ws1");
 });
 
 test.skipIf(!reachable)("heartbeat self-heals after presence already expired/gone", async () => {
@@ -60,6 +77,26 @@ test.skipIf(!reachable)("ackAll marks acked_at in history, like ackMessage does"
 
   await presence!.unregister("t-cccc", "ws1");
   await presence!.unregister("t-dddd", "ws1");
+});
+
+test.skipIf(!reachable)("messages older than the retention window get trimmed on next write", async () => {
+  await presence!.register("t-purge", "demo", "ws1");
+  await client!.valkey.del("inbox:ws1:t-purge"); // isolate from any prior run's leftover stream entries
+  const oldId = `${Date.now() - messages!.RETENTION_MS - 60_000}-0`;
+  await client!.valkey.xadd(
+    "inbox:ws1:t-purge",
+    oldId,
+    "from", "t-old", "to", "t-purge", "message", "ancient", "timestamp", new Date(0).toISOString(), "reply_to", "",
+  );
+  let inbox = await messages!.peekMessages("ws1", "t-purge");
+  expect(inbox.some((m) => m.id === `msg-${oldId}`)).toBe(true);
+
+  await messages!.sendMessage("ws1", "t-other", "t-purge", "fresh"); // triggers MINID trim
+  inbox = await messages!.peekMessages("ws1", "t-purge");
+  expect(inbox.some((m) => m.id === `msg-${oldId}`)).toBe(false);
+  expect(inbox.some((m) => m.message === "fresh")).toBe(true);
+
+  await presence!.unregister("t-purge", "ws1");
 });
 
 test.skipIf(!reachable)("rejects path traversal in agent code", async () => {

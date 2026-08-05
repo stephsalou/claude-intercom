@@ -4,7 +4,12 @@ import type { PresenceInfo } from "../store.js";
 
 const TTL_SECONDS = 30;
 
-export async function register(code: string, project: string, workspace: string): Promise<void> {
+export async function register(
+  code: string,
+  project: string,
+  workspace: string,
+  name?: string,
+): Promise<void> {
   assertSafeId(code, "agent code");
   assertSafeId(workspace, "workspace");
   const info: PresenceInfo = {
@@ -12,11 +17,17 @@ export async function register(code: string, project: string, workspace: string)
     pid: 0,
     project,
     started: new Date().toISOString(),
+    name: name || undefined,
   };
   await valkey.set(`presence:${workspace}:${code}`, JSON.stringify(info), "EX", TTL_SECONDS);
 }
 
-export async function heartbeat(code: string, workspace: string, project?: string): Promise<boolean> {
+export async function heartbeat(
+  code: string,
+  workspace: string,
+  project?: string,
+  name?: string,
+): Promise<boolean> {
   assertSafeId(code, "agent code");
   assertSafeId(workspace, "workspace");
   const result = await valkey.expire(`presence:${workspace}:${code}`, TTL_SECONDS);
@@ -25,7 +36,7 @@ export async function heartbeat(code: string, workspace: string, project?: strin
   // plain EXPIRE can never resurrect it, so this agent would stay invisible until its
   // process restarts. Re-register instead, if we know enough to.
   if (!project) return false;
-  await register(code, project, workspace);
+  await register(code, project, workspace, name);
   return true;
 }
 

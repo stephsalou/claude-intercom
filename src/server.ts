@@ -20,8 +20,11 @@ const unregisterSync = remoteClient.isRemote ? remoteClient.unregisterSync : loc
 const agentCode = generateCode();
 const pid = process.pid;
 const project = detectProject();
+// Optional human-friendly label shown alongside the technical code in who() and the
+// dashboard — the code itself always stays the one used for routing (send/reply/ack).
+const agentName = process.env.INTERCOM_AGENT_NAME || undefined;
 
-await register(agentCode, pid, project);
+await register(agentCode, pid, project, agentName);
 const sessionPids = registerSessionSync(agentCode);
 
 // Cleanup on exit — sync to ensure it runs
@@ -53,12 +56,13 @@ By default shows only agents on the same project. Set scope='all' to see everyon
   async ({ scope }) => {
     const filter = scope === "project" ? project : undefined;
     const agents = await listAgents(filter);
+    const me = agentName ? `${agentName} [${agentCode}]` : `[${agentCode}]`;
     if (agents.length <= 1) {
       return {
         content: [
           {
             type: "text",
-            text: `You are [${agentCode}] on project "${project}". No other agents ${scope === "project" ? "on this project" : "connected"}.`,
+            text: `You are ${me} on project "${project}". No other agents ${scope === "project" ? "on this project" : "connected"}.`,
           },
         ],
       };
@@ -66,14 +70,15 @@ By default shows only agents on the same project. Set scope='all' to see everyon
     const list = agents
       .map((a) => {
         const tag = a.code === agentCode ? " (you)" : "";
-        return `  ${a.code}${tag} — ${a.project} (since ${a.started})`;
+        const label = a.name ? `${a.name} [${a.code}]` : a.code;
+        return `  ${label}${tag} — ${a.project} (since ${a.started})`;
       })
       .join("\n");
     return {
       content: [
         {
           type: "text",
-          text: `You are [${agentCode}] on "${project}"\n\nActive agents${scope === "project" ? ` on "${project}"` : ""}:\n${list}`,
+          text: `You are ${me} on "${project}"\n\nActive agents${scope === "project" ? ` on "${project}"` : ""}:\n${list}`,
         },
       ],
     };

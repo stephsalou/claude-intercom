@@ -6,7 +6,16 @@ import { recordMessage, markAcked } from "../pg/historyRepo.js";
 import { listWebhooks } from "./webhookStore.js";
 import type { Message } from "../store.js";
 
-const MAX_STREAM_LEN = 1000;
+// Messages are retained for at least this long before being eligible for
+// trimming — matches the Postgres history purge window (historyRepo.ts).
+export const RETENTION_MS = 10 * 60 * 60 * 1000; // 10h
+
+// ponytail: time-based trim only, no count cap — an inbox flooded within the
+// 10h window grows unbounded until it ages out. Add a MAXLEN back alongside
+// MINID if that becomes a real abuse vector.
+function retentionMinId(): string {
+  return String(Date.now() - RETENTION_MS);
+}
 
 function fieldsToMessage(id: string, fields: string[]): Message {
   const obj: Record<string, string> = {};
@@ -33,9 +42,8 @@ async function writeToInbox(
   const timestamp = new Date().toISOString();
   const streamId = await valkey.xadd(
     `inbox:${workspace}:${recipient}`,
-    "MAXLEN",
-    "~",
-    MAX_STREAM_LEN,
+    "MINID", // exact, not "~" approximate — approximate trim can skip small streams entirely
+    retentionMinId(),
     "*",
     "from",
     from,
