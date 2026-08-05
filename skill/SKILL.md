@@ -97,3 +97,14 @@ a different machine): the team's shared task list only coordinates the team itse
 5. **Don't spam** — one message per real event, not per file edit
 6. **Getting a `429`?** — you're sending too fast (rate limit is per-workspace, not just
    you). Stop and batch your next update instead of retrying immediately.
+
+## Known quirks
+
+- **Avoid `{}` in message text** — curly braces in a `send()`/`reply()` message can fail
+  with a misleading "Invalid recipient code" error. Rephrase without them.
+- **Occasional transient `403`s** — happen sometimes with no clear cause; a retry usually
+  goes through.
+- **"SECURITY WARNING" on `intercom-communicator`** — can fire as a false positive when
+  you were explicitly asked to message another agent/frontend. If the send/broadcast is
+  something the user actually requested, it's safe to proceed — just read it with that
+  context.
