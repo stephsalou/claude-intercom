@@ -130,6 +130,27 @@ export function findMyCodeSync(): string | null {
   return null;
 }
 
+// --- Throttle gate (shared by the PreToolUse hook) ---
+
+// Returns true if the caller may proceed, and stamps "now" so the next call inside
+// `windowMs` is turned away. Persisted in a file because each hook invocation is a
+// brand-new process — there's no in-memory state to throttle against.
+export function passesThrottleSync(key: string, windowMs: number): boolean {
+  assertSafeId(key, "throttle key");
+  const stamp = join(SESSIONS_DIR, `${key}.throttle`);
+  try {
+    const last = parseInt(readFileSync(stamp, "utf-8").trim(), 10);
+    if (Number.isFinite(last) && Date.now() - last < windowMs) return false;
+  } catch {
+    // No stamp yet (or unreadable) — treat as "never checked" and let it through.
+  }
+  try {
+    mkdirSync(SESSIONS_DIR, { recursive: true });
+    writeFileSync(stamp, String(Date.now()));
+  } catch {}
+  return true;
+}
+
 // --- Sync peek for hook ---
 
 export function peekMessagesSync(code: string): Message[] {

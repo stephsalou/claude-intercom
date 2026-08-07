@@ -29,6 +29,23 @@ test("broadcast to all excludes the sender", async () => {
   expect(inboxA.some((m) => m.message === "broadcast")).toBe(false);
 });
 
+test("passesThrottleSync lets the first call through and turns away the rest in-window", async () => {
+  expect(store.passesThrottleSync("thr1", 10_000)).toBe(true);
+  expect(store.passesThrottleSync("thr1", 10_000)).toBe(false);
+  expect(store.passesThrottleSync("thr1", 10_000)).toBe(false);
+
+  // a different key has its own window
+  expect(store.passesThrottleSync("thr2", 10_000)).toBe(true);
+
+  // once the window has elapsed, the gate opens again
+  await Bun.sleep(30);
+  expect(store.passesThrottleSync("thr1", 20)).toBe(true);
+});
+
+test("passesThrottleSync rejects unsafe keys", () => {
+  expect(() => store.passesThrottleSync("../../evil", 1000)).toThrow();
+});
+
 test("rejects path traversal in recipient code", async () => {
   await expect(
     store.sendMessage("aaaa", "../../evil", "x"),

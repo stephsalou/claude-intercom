@@ -2,6 +2,7 @@ import * as presence from "../valkey/presenceStore.js";
 import * as messages from "../valkey/messageStore.js";
 import { onNewMessage } from "../valkey/subscribe.js";
 import { resolveWorkspace, extractBearerToken } from "./auth.js";
+import { checkHealth, healthStatusCode } from "./health.js";
 import { history, purgeOldHistory } from "../pg/historyRepo.js";
 import { recordCommand, listCommands, purgeOldCommands } from "../pg/commandLogRepo.js";
 import { RETENTION_MS } from "../valkey/messageStore.js";
@@ -73,14 +74,11 @@ Bun.serve({
     const url = new URL(req.url);
 
     if (url.pathname === "/health") {
-      return json({ status: "ok" });
-    }
-
-    if (url.pathname === "/dashboard") {
-      // No server-side auth check here — the page itself prompts for a token and
-      // sends it on every API call it makes (query param for SSE, header otherwise).
-      const file = Bun.file(new URL("../../public/dashboard.html", import.meta.url));
-      return new Response(file, { headers: { "content-type": "text/html" } });
+      const report = await checkHealth();
+      // Loud on the way out too: a silent "degraded" is how a 5-day Postgres
+      // outage went unnoticed while /health cheerfully returned ok.
+      if (report.status !== "ok") console.error("health degraded:", report);
+      return json(report, healthStatusCode(report));
     }
 
     const workspace = await resolveWorkspace(extractBearerToken(req));

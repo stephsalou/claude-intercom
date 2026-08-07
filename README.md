@@ -247,9 +247,10 @@ heartbeats — no manual cleanup needed.
 | Route | Method | Body / Query | Notes |
 |-------|--------|---------------|-------|
 | `/health` | GET | — | No auth |
-| `/register` | POST | `{code, project}` | |
-| `/heartbeat` | POST | `{code}` | Renews the 30s presence TTL |
-| `/who` | GET | `?scope=project\|all&project=X` | |
+| `/register` | POST | `{code, project, name?}` | `name` is an optional friendly label |
+| `/heartbeat` | POST | `{code, project?, name?}` | Renews the 30s presence TTL; re-registers if it already expired |
+| `/mode` | POST | `{code, mode: "sse"\|"poll"}` | Watcher reports whether it holds a live SSE connection |
+| `/who` | GET | `?scope=project\|all&project=X&code=X` | `code` = caller, logged to the audit trail |
 | `/send` | POST | `{from, to, message}` | `to="all"` broadcasts; `429` past `RATE_LIMIT_PER_MIN` per workspace |
 | `/reply` | POST | `{from, message_id, message}` | |
 | `/peek` | GET | `?code=X` | |
@@ -257,7 +258,7 @@ heartbeats — no manual cleanup needed.
 | `/ack_all` | POST | `{code}` | |
 | `/events` | GET | `?code=X` | Server-Sent Events stream |
 | `/history` | GET | `?code=X&since=<iso>&limit=100` | Durable log (Postgres) — includes acked messages |
-| `/dashboard` | GET | — | Minimal built-in HTML dashboard (paste a token). Superseded by the Next.js app in `web/` — see below |
+| `/commands` | GET | `?code=X&limit=100` | Audit trail of an agent's tool calls |
 | `/webhooks` | POST | `{url, events: ["broadcast"]}` | Register a webhook for your workspace |
 | `/webhooks` | GET | — | List your workspace's registered webhooks |
 
@@ -267,9 +268,9 @@ filesystem store — see [Talk to agents on other machines](#4-optional-talk-to-
 ## Web dashboard (`web/`)
 
 A full Next.js app with real username/password accounts (one account can access
-several workspaces), replacing the built-in `/dashboard` page. It never exposes a raw
-API token to the browser — the server resolves the right token per request from the
-account's granted workspaces and proxies to the API.
+several workspaces). It never exposes a raw API token to the browser — the server
+resolves the right token per request from the account's granted workspaces and
+proxies to the API.
 
 Three tabs per workspace:
 

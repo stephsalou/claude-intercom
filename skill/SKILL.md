@@ -107,10 +107,10 @@ actually use for routing; the name is purely cosmetic and never required.
 
 ## Known quirks
 
-- **Avoid `{}` in message text** — curly braces in a `send()`/`reply()` message can fail
-  with a misleading "Invalid recipient code" error. Rephrase without them.
-- **Occasional transient `403`s** — happen sometimes with no clear cause; a retry usually
-  goes through.
+- **`send` failures now say what actually broke.** They used to always read "Invalid
+  recipient code" no matter the cause — that was a bug, not a recipient problem, and
+  it's what made curly braces look cursed. Read the real message: `429` = rate limit,
+  `403` = the reverse proxy blocked it (retry), anything else = report it.
 - **"SECURITY WARNING" on `intercom-communicator`** — can fire as a false positive when
   you were explicitly asked to message another agent/frontend. If the send/broadcast is
   something the user actually requested, it's safe to proceed — just read it with that

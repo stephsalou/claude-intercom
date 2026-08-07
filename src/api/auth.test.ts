@@ -19,14 +19,10 @@ test("extractBearerToken reads the Authorization header", async () => {
   expect(extractBearerToken(new Request("http://x"))).toBeNull();
 });
 
-test("extractBearerToken falls back to a ?token= query param (EventSource can't set headers)", async () => {
+test("extractBearerToken ignores a ?token= query param — credentials don't belong in URLs", async () => {
   const { extractBearerToken } = await import("./auth.ts");
-  const req = new Request("http://x/events?code=aaaa&token=abc123");
-  expect(extractBearerToken(req)).toBe("abc123");
-});
-
-test("extractBearerToken prefers the header over the query param", async () => {
-  const { extractBearerToken } = await import("./auth.ts");
+  expect(extractBearerToken(new Request("http://x/events?code=aaaa&token=abc123"))).toBeNull();
+  // and a query param can't override a real header
   const req = new Request("http://x/events?token=from-query", {
     headers: { authorization: "Bearer from-header" },
   });

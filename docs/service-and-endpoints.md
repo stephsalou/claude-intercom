@@ -33,25 +33,28 @@ Two separate surfaces exist today:
 ## Core API — full endpoint reference
 
 Base: `https://intercom.utilitaires.ci` (prod) or `http://localhost:8787` (local).
-All bodies are JSON. All routes except `/health` and `/dashboard` require the Bearer
-token.
+All bodies are JSON. Every route except `/health` requires the Bearer token, in the
+`Authorization` header — there is no `?token=` query fallback (credentials in URLs
+leak into access logs).
 
 | Method | Path | Body / Query | Response | Notes |
 |---|---|---|---|---|
-| GET | `/health` | — | `{status:"ok"}` | No auth |
-| POST | `/register` | `{code, project}` | `{ok:true}` | Presence key, 30s TTL |
-| POST | `/heartbeat` | `{code}` | `{ok:boolean}` | Renews the 30s TTL |
-| GET | `/who` | `?scope=project\|all&project=X` | `{agents: PresenceInfo[]}` | `project` scope filters by project name |
+| GET | `/health` | — | `{status, valkey, postgres}` | No auth. Pings both stores. `503` only if Valkey is down; a Postgres outage is `200` + `status:"degraded"` since messaging still works |
+| POST | `/register` | `{code, project, name?}` | `{ok:true}` | Presence key, 30s TTL. `name` = optional friendly label |
+| POST | `/heartbeat` | `{code, project?, name?}` | `{ok:boolean}` | Renews the 30s TTL. Re-registers (self-heals) if the key already expired — needs `project` to do so |
+| POST | `/mode` | `{code, mode:"sse"\|"poll"}` | `{ok:true}` | Watcher reports whether it currently holds a live SSE connection |
+| GET | `/who` | `?scope=project\|all&project=X&code=X` | `{agents: PresenceInfo[]}` | `project` scope filters by project name; `code` identifies the caller for the audit trail |
 | POST | `/send` | `{from, to, message, reply_to?, project?}` | `{message: Message}` | `to="all"` broadcasts to every agent in `project`; `429` past the rate limit |
 | POST | `/reply` | `{from, message_id, message}` | `{message: Message}` | Sends to original sender, auto-acks the original; `404` if not found |
 | GET | `/peek` | `?code=X` | `{messages: Message[]}` | Unread inbox for `code` |
 | POST | `/ack` | `{code, message_id}` | `{ok:boolean}` | `404` if not found |
 | POST | `/ack_all` | `{code}` | `{count:number}` | |
-| GET | `/events` | `?code=X` (or `?token=` instead of header, for `EventSource`) | `text/event-stream` | `data: {"messageId":"..."}` per new message; `: ping` every 15s |
+| GET | `/events` | `?code=X` | `text/event-stream` | `data: {"messageId":"..."}` per new message; `: ping` every 15s. Browsers must reach this through the `web/` proxy, which adds the header |
 | GET | `/history` | `?code=X&since=<iso>&limit=100` | `{messages: (Message & {acked_at})[]}` | Durable log (Postgres) — includes already-acked messages |
+| GET | `/commands` | `?code=X&limit=100` | `{commands: CommandLogEntry[]}` | Audit trail of an agent's tool calls, newest first |
 | POST | `/webhooks` | `{url, events: ["broadcast"]}` | `{webhook: Webhook}` | |
 | GET | `/webhooks` | — | `{webhooks: Webhook[]}` | |
-| GET | `/dashboard` | — | `text/html` | Legacy minimal static dashboard (superseded by `web/`), no server-side auth — the page itself prompts for a token |
+| DELETE | `/webhooks/:id` | — | `{ok:boolean}` | `404` if unknown |
 
 ### Data shapes
 

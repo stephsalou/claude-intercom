@@ -107,9 +107,12 @@ Proactively send messages when:
     try {
       const projectFilter = to === "all" ? project : undefined;
       msg = await sendMessage(agentCode, to, message, undefined, projectFilter);
-    } catch {
+    } catch (err) {
+      // Report what actually failed. This used to always claim "Invalid recipient
+      // code", which disguised WAF blocks, rate limits and network errors as
+      // validation errors — the source of the phantom "braces break send()" quirk.
       return {
-        content: [{ type: "text", text: `Invalid recipient code: "${to}"` }],
+        content: [{ type: "text", text: `send to "${to}" failed: ${(err as Error).message}` }],
       };
     }
     const target = to === "all" ? `all agents on "${project}"` : to;
@@ -203,9 +206,9 @@ server.tool(
     let ok = false;
     try {
       ok = await ackMessage(agentCode, message_id);
-    } catch {
+    } catch (err) {
       return {
-        content: [{ type: "text", text: `Invalid message id: "${message_id}"` }],
+        content: [{ type: "text", text: `ack of "${message_id}" failed: ${(err as Error).message}` }],
       };
     }
     return {

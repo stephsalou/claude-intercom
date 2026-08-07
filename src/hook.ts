@@ -1,5 +1,14 @@
-import { findMyCodeSync, peekMessagesSync } from "./store.js";
+import { findMyCodeSync, peekMessagesSync, passesThrottleSync } from "./store.js";
 import * as remoteClient from "./mcpClient.js";
+
+// This hook runs before EVERY tool call. In hosted mode each run was a fresh HTTPS
+// round-trip to the API: the latency was charged to every Read/Edit/Bash, and the
+// request volume from a handful of parallel agents behind one IP is what kept
+// tripping the reverse proxy's abuse detection and banning them. Worst case a
+// message now surfaces this many ms late — the watcher's SSE stream is what makes
+// delivery feel instant, not this. Local mode reads the filesystem, which costs
+// nothing, so it stays unthrottled.
+const REMOTE_PEEK_THROTTLE_MS = 10_000;
 
 // Read stdin to check if this is an intercom tool call (skip to avoid duplicates)
 let input = "";
@@ -24,9 +33,13 @@ const code = findMyCodeSync();
 if (!code) process.exit(0);
 
 // Check inbox
-const messages = remoteClient.isRemote
-  ? await remoteClient.peekMessages(code).catch(() => [])
-  : peekMessagesSync(code);
+let messages;
+if (remoteClient.isRemote) {
+  if (!passesThrottleSync(code, REMOTE_PEEK_THROTTLE_MS)) process.exit(0);
+  messages = await remoteClient.peekMessages(code).catch(() => []);
+} else {
+  messages = peekMessagesSync(code);
+}
 if (messages.length === 0) process.exit(0);
 
 // Output messages — this gets injected into the agent's context
